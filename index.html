@@ -80,7 +80,6 @@
 </head>
 <body>
 
-  <!-- ЭКРАН: Авторизация -->
   <div class="screen active" id="screen-auth">
     <h1 id="auth-title">Добро пожаловать!</h1>
     <p class="subtitle" id="auth-subtitle">Войди, чтобы управлять парами</p>
@@ -105,7 +104,6 @@
     </div>
   </div>
 
-  <!-- ЭКРАН: Расписание -->
   <div class="screen" id="screen-schedule">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
       <h1>Расписание</h1>
@@ -147,7 +145,6 @@
     </div>
   </div>
 
-  <!-- ЭКРАН: Материалы -->
   <div class="screen" id="screen-materials">
     <h1>Учебные материалы</h1>
     <p class="subtitle">Лекции, практики и лабораторные</p>
@@ -165,7 +162,6 @@
     </div>
   </div>
 
-  <!-- ЭКРАН: Отметка и Отчеты -->
   <div class="screen" id="screen-reports">
     <h1>Посещаемость</h1>
     
@@ -196,13 +192,12 @@
     <div class="card">
       <h2>Загрузка расписания (.ics)</h2>
       <p class="subtitle" style="margin-bottom:10px;">Только для старосты</p>
-      <div class="file-upload" onclick="alert('В реальной версии здесь откроется выбор файла!')">
+      <div class="file-upload" onclick="alert('В реальном приложении здесь откроется выбор файла!')">
         + Выбрать файл .ics
       </div>
     </div>
   </div>
 
-  <!-- Нижнее меню -->
   <div class="bottom-nav" id="main-nav" style="display: none;">
     <div class="nav-item active" onclick="show('screen-schedule', this)">
       <div class="nav-icon">📅</div>Расписание
@@ -218,7 +213,6 @@
 <script>
   let currentRole = 'student';
   let isLoginMode = true; 
-  let currentUserName = '';
 
   const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
@@ -227,7 +221,6 @@
   const tg = window.Telegram.WebApp;
   if (tg && tg.ready) { tg.ready(); tg.expand(); }
 
-  // Устанавливаем сегодняшнюю дату
   const today = new Date().toLocaleDateString('ru-RU');
   document.getElementById('today-date').innerText = today;
 
@@ -250,7 +243,7 @@
       document.getElementById('auth-subtitle').innerText = 'Зарегистрируйся как ' + (currentRole === 'student' ? 'студент' : 'преподаватель');
       document.getElementById('main-auth-btn').innerText = 'Зарегистрироваться';
       document.getElementById('toggle-auth-btn').innerText = 'У меня уже есть аккаунт';
-      document.getElementById('name-field').style.display = 'block'; // Показываем поле ФИО при регистрации
+      document.getElementById('name-field').style.display = 'block';
     }
   }
 
@@ -270,13 +263,10 @@
       if (isLoginMode) {
         const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        currentUserName = data.user.user_metadata?.full_name || email.split('@')[0];
         loginSuccess();
       } else {
         const { data, error } = await _supabase.auth.signUp({ 
-          email, 
-          password, 
-          options: { data: { role: currentRole, full_name: name } } // Сохраняем ФИО
+          email, password, options: { data: { role: currentRole, full_name: name } }
         });
         if (error) throw error;
         alert('Регистрация успешна! Теперь ты можешь войти.');
@@ -294,7 +284,7 @@
     document.getElementById('screen-auth').classList.remove('active');
     document.getElementById('main-nav').style.display = 'flex';
     show('screen-schedule');
-    loadReport(); // Загружаем данные при входе
+    loadReport();
   }
 
   async function logout() {
@@ -315,21 +305,21 @@
       navElement.classList.add('active');
     }
     if (screenId === 'screen-reports') {
-      loadReport(); // Обновляем отчет при переходе на вкладку
+      loadReport();
     }
     window.scrollTo(0, 0);
   }
 
-  // --- ОТМЕТКА ПОСЕЩАЕМОСТИ ---
   async function markAttendance(status) {
     const { data: { user } } = await _supabase.auth.getUser();
     if (!user) return alert('Ошибка: ты не авторизован');
 
     const msg = document.getElementById('mark-msg');
     msg.innerText = 'Отправка...';
+    msg.style.color = '#fff';
 
-    // Имя берем из метаданных пользователя (сохраненное при регистрации)
-    const userName = user.user_metadata?.full_name || user.email.split('@')[0];
+    // Берем имя из метаданных
+    const userName = user.user_metadata?.full_name || 'Без имени';
 
     const { error } = await _supabase.from('attendance').insert([
       { user_id: user.id, user_email: user.email, user_name: userName, status: status, date: today }
@@ -341,11 +331,10 @@
     } else {
       msg.innerText = 'Успешно отмечено: ' + status;
       msg.style.color = '#d4edda';
-      loadReport(); // Обновляем отчет сразу
+      loadReport();
     }
   }
 
-  // --- ЗАГРУЗКА ОТЧЕТА ---
   async function loadReport() {
     const tbody = document.getElementById('report-body');
     tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr>';
@@ -368,7 +357,7 @@
       if (row.status === 'Опоздаю') badgeClass = 'bg-yellow';
       if (row.status === 'Не буду') badgeClass = 'bg-red';
       
-      const displayName = row.user_name || (row.user_email ? row.user_email.split('@')[0] : 'Неизвестный');
+      const displayName = row.user_name || 'Без имени';
 
       tbody.innerHTML += `
         <tr>
@@ -379,7 +368,6 @@
     });
   }
 
-  // --- ВЫГРУЗКА В EXCEL ---
   async function downloadExcel() {
     const { data, error } = await _supabase.from('attendance').select('*');
     if (error) return alert('Ошибка при выгрузке: ' + error.message);
@@ -387,7 +375,7 @@
 
     const rows = [['Дата', 'ФИО', 'Email', 'Статус']];
     data.forEach(row => {
-      const displayName = row.user_name || (row.user_email ? row.user_email.split('@')[0] : 'Неизвестный');
+      const displayName = row.user_name || 'Без имени';
       rows.push([row.date, displayName, row.user_email, row.status]);
     });
 
@@ -400,4 +388,4 @@
   }
 </script>
 </body>
-</html>
+  </html> 
