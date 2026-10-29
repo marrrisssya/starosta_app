@@ -137,6 +137,7 @@
   </div>
 
 <script>
+  // --- ОБЪЯВЛЯЕМ ПЕРЕМЕННЫЕ В САМОМ НАЧАЛЕ ---
   let currentRole = 'student';
   let isLoginMode = true; 
   let userRole = 'student';
@@ -273,7 +274,7 @@
         document.getElementById('screen-auth').classList.remove('active');
         document.getElementById('main-nav').style.display = 'flex';
         show('screen-schedule');
-        renderSchedule();
+        renderSchedule(); // Теперь вызывается после объявления данных
         loadReport();
       } else {
         const { error } = await _supabase.auth.signUp({ 
@@ -372,4 +373,4 @@
   }
 </script>
 </body>
-      </html>
+      </html> 
