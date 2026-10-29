@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Помощник старосты</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { background: #f8f5fc; font-family: sans-serif; padding: 16px; color: #2b2b2b; margin: 0; }
+  .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(123,44,191,0.1); margin-bottom: 16px; }
+  h1 { color: #3c096c; font-size: 22px; margin-bottom: 10px; margin-top: 0; }
+  h2 { color: #3c096c; font-size: 18px; margin-top: 10px; margin-bottom: 10px; border-bottom: 2px solid #e0d0f0; padding-bottom: 5px; }
+  input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e0d0f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+  button { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; background: #7b2cbf; color: white; }
+  .btn-outline { background: transparent; color: #7b2cbf; border: 2px solid #7b2cbf; }
+  .btn-green { background: #2ecc71; }
+  .btn-yellow { background: #f1c40f; }
+  .btn-red { background: #e74c3c; }
+  .class-item { display: flex; gap: 12px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+  .class-time { font-weight: bold; color: #7b2cbf; width: 50px; flex-shrink: 0; font-size: 14px; }
+  .class-info { flex-grow: 1; }
+  .class-subject { font-weight: bold; font-size: 15px; margin-bottom: 4px; }
+  .class-teacher { font-style: italic; color: #666; font-size: 13px; margin-bottom: 4px; }
+  .class-room { color: #7b2cbf; font-weight: bold; font-size: 13px; margin-bottom: 4px; }
+  .class-type { font-size: 11px; background: #e0d0f0; padding: 2px 8px; border-radius: 10px; display: inline-block; color: #3c096c; }
+  .hidden { display: none; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+</style>
+</head>
+<body>
+
+  <div id="screen-auth">
+    <h1>Вход</h1>
+    <div class="card">
+      <input type="email" id="auth-email" placeholder="Email">
+      <input type="password" id="auth-pass" placeholder="Пароль">
+      <button onclick="handleAuth()" id="main-auth-btn">Войти</button>
+      <button class="btn-outline" onclick="toggleAuthMode()" id="toggle-auth-btn">Зарегистрироваться</button>
+    </div>
+  </div>
+
+  <div id="screen-schedule" class="hidden">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h1>Расписание</h1>
+      <button onclick="logout()" style="width: auto; background: #ffe3e3; color: #e74c3c; padding: 8px 12px; font-size: 13px;">Выйти</button>
+    </div>
+    
+    <div class="card">
+      <h2>Понедельник</h2>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Иностранный язык</div>
+          <div class="class-teacher">Пахотина С.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 17</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 36</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Вторник</h2>
+      <div class="class-item">
+        <div class="class-time">08:30</div>
+        <div class="class-info">
+          <div class="class-subject">Иностранный язык</div>
+          <div class="class-teacher">Пахотина С.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 17</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Посещаемость</h2>
+      <div class="grid">
+        <button class="btn-green" onclick="markAttendance('Буду')">Буду</button>
+        <button class="btn-yellow" onclick="markAttendance('Опоздаю')">Опоздаю</button>
+      </div>
+      <div id="mark-msg" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
+    </div>
+  </div>
+
+<script>
+  let isLoginMode = true;
+  const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    document.getElementById('main-auth-btn').innerText = isLoginMode ? 'Войти' : 'Зарегистрироваться';
+    document.getElementById('toggle-auth-btn').innerText = isLoginMode ? 'Зарегистрироваться' : 'У меня есть аккаунт';
+  }
+
+  async function handleAuth() {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-pass').value;
+    const btn = document.getElementById('main-auth-btn');
+    
+    if (!email || !password) return alert('Введи email и пароль');
+    btn.innerText = 'Загрузка...';
+
+    try {
+      if (isLoginMode) {
+        const { error } = await _supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        document.getElementById('screen-auth').classList.add('hidden');
+        document.getElementById('screen-schedule').classList.remove('hidden');
+      } else {
+        const { error } = await _supabase.auth.signUp({ email, password, options: { data: { role: 'student', full_name: 'Студент' } } });
+        if (error) throw error;
+        alert('Регистрация успешна! Войди.');
+        toggleAuthMode(); 
+      }
+    } catch (error) {
+      alert('Ошибка: ' + error.message);
+    } finally {
+      btn.innerText = isLoginMode ? 'Войти' : 'Зарегистрироваться';
+    }
+  }
+
+  async function logout() {
+    await _supabase.auth.signOut();
+    document.getElementById('screen-schedule').classList.add('hidden');
+    document.getElementById('screen-auth').classList.remove('hidden');
+  }
+
+  async function markAttendance(status) {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return alert('Нет авторизации');
+    
+    const msg = document.getElementById('mark-msg');
+    msg.innerText = 'Отправка...'; 
+    msg.style.color = 'black';
+
+    const todayDate = new Date().toLocaleDateString('ru-RU');
+    const userName = user.user_metadata?.full_name || 'Без имени';
+
+    const { error } = await _supabase.from('attendance').insert([{ 
+      user_id: user.id, user_email: user.email, user_name: userName, status: status, date: todayDate 
+    }]);
+
+    if (error) { msg.innerText = 'Ошибка: ' + error.message; msg.style.color = 'red'; } 
+    else { msg.innerText = 'Успешно: ' + status; msg.style.color = 'green'; }
+  }
+</script>
+</body>
+</html>
