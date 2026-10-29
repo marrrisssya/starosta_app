@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Хим-Помощник старосты</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jura:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0d0814;
+    --card-bg: #171022;
+    --primary: #a855f7;
+    --primary-glow: #d8b4fe;
+    --accent: #34d399;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --text: #f3e8ff;
+    --text-muted: #9ca3af;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Jura', -apple-system, sans-serif; }
+  body { 
+    background-color: var(--bg); 
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.15) 0%, transparent 70%),
+      linear-gradient(0deg, transparent 24%, rgba(168, 85, 247, 0.05) 25%, rgba(168, 85, 247, 0.05) 26%, transparent 27%, transparent 74%, rgba(168, 85, 247, 0.05) 75%, rgba(168, 85, 247, 0.05) 76%, transparent 77%, transparent),
+      linear-gradient(90deg, transparent 24%, rgba(168, 85, 247, 0.05) 25%, rgba(168, 85, 247, 0.05) 26%, transparent 27%, transparent 74%, rgba(168, 85, 247, 0.05) 75%, rgba(168, 85, 247, 0.05) 76%, transparent 77%, transparent);
+    background-size: 100% 100%, 40px 40px, 40px 40px;
+    color: var(--text); 
+    padding: 16px;
+    padding-bottom: 80px;
+    margin: 0;
+  }
+  
+  /* Экраны */
+  .screen { display: none; animation: fadeIn 0.3s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .card { 
+    background: var(--card-bg); 
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 16px; 
+    padding: 20px; 
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(168, 85, 247, 0.05); 
+    margin-bottom: 16px; 
+    backdrop-filter: blur(10px);
+  }
+  
+  h1 { color: var(--primary-glow); font-size: 24px; margin-bottom: 10px; text-shadow: 0 0 15px rgba(216, 180, 254, 0.4); display: flex; align-items: center; gap: 8px; }
+  h2 { color: var(--text); font-size: 18px; margin-top: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(168, 85, 247, 0.2); padding-bottom: 8px; }
+  
+  label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 10px; font-size: 16px; background: rgba(0,0,0,0.3); color: var(--text); outline: none; transition: 0.3s; }
+  input:focus { border-color: var(--primary-glow); box-shadow: 0 0 10px rgba(168, 85, 247, 0.3); }
+  
+  button { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 12px; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; font-family: 'Jura', sans-serif; }
+  .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+  .btn-primary:active { transform: scale(0.98); box-shadow: 0 0 5px rgba(168, 85, 247, 0.6); }
+  .btn-outline { background: transparent; color: var(--primary-glow); border: 2px solid var(--primary); }
+  .btn-green { background: rgba(52, 211, 153, 0.15); color: var(--accent); border: 1px solid var(--accent); box-shadow: 0 0 10px rgba(52, 211, 153, 0.2); }
+  .btn-yellow { background: rgba(251, 191, 36, 0.15); color: var(--warning); border: 1px solid var(--warning); box-shadow: 0 0 10px rgba(251, 191, 36, 0.2); }
+  .btn-red { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid var(--danger); box-shadow: 0 0 10px rgba(248, 113, 113, 0.2); }
+  .btn-sm { padding: 8px 12px; font-size: 12px; width: auto; }
+  
+  .role-switch { display: flex; gap: 10px; margin-bottom: 20px; }
+  .role-btn { flex: 1; padding: 12px; text-align: center; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(168, 85, 247, 0.2); color: var(--text-muted); font-weight: 600; cursor: pointer; text-transform: uppercase; font-size: 13px; }
+  .role-btn.active { background: rgba(168, 85, 247, 0.2); border-color: var(--primary); color: var(--primary-glow); box-shadow: 0 0 15px rgba(168, 85, 247, 0.2); }
+
+  .class-item { display: flex; gap: 12px; margin-bottom: 15px; border-bottom: 1px dashed rgba(168, 85, 247, 0.2); padding-bottom: 15px; }
+  .class-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .class-time { font-weight: bold; color: var(--primary-glow); width: 55px; flex-shrink: 0; font-size: 15px; }
+  .class-info { flex-grow: 1; }
+  .class-subject { font-weight: 700; font-size: 16px; margin-bottom: 6px; color: #fff; }
+  .class-teacher { font-style: italic; color: var(--text-muted); font-size: 13px; margin-bottom: 6px; }
+  .class-room { color: var(--accent); font-weight: bold; font-size: 13px; margin-bottom: 6px; }
+  .class-type { font-size: 11px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); padding: 3px 10px; border-radius: 12px; display: inline-block; color: var(--primary-glow); text-transform: uppercase; letter-spacing: 1px; }
+
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(13, 8, 20, 0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid rgba(168, 85, 247, 0.2); z-index: 100; }
+  .nav-item { text-align: center; font-size: 12px; color: var(--text-muted); cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+  .nav-item.active { color: var(--primary-glow); text-shadow: 0 0 10px rgba(216, 180, 254, 0.5); }
+  .nav-icon { font-size: 22px; margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+  th { text-align: left; padding: 10px 5px; color: var(--text-muted); border-bottom: 1px solid rgba(168, 85, 247, 0.3); text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
+  td { padding: 12px 5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+  .bg-green { background: rgba(52, 211, 153, 0.2); color: var(--accent); border: 1px solid rgba(52, 211, 153, 0.4); }
+  .bg-yellow { background: rgba(251, 191, 36, 0.2); color: var(--warning); border: 1px solid rgba(251, 191, 36, 0.4); }
+  .bg-red { background: rgba(248, 113, 113, 0.2); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.4); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .status-msg { text-align: center; margin-top: 10px; font-weight: bold; font-size: 14px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+  <!-- ЭКРАН ВХОДА -->
+  <div class="screen active" id="screen-auth">
+    <h1>🧪 Хим-Помощник</h1>
+    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 14px;">Войди в систему лаборатории</p>
+    
+    <div class="role-switch">
+      <div id="role-student" class="role-btn active" onclick="setRole('student')">Студент</div>
+      <div id="role-teacher" class="role-btn" onclick="setRole('teacher')">Преподаватель</div>
+    </div>
+
+    <div class="card">
+      <div id="name-field" class="hidden">
+        <label>ФИО</label>
+        <input type="text" id="auth-name" placeholder="Иванов Иван Иванович">
+      </div>
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="student@mail.ru">
+      <label>Пароль</label>
+      <input type="password" id="auth-pass" placeholder="••••••••">
+      <button class="btn-primary" onclick="handleAuth()" id="main-auth-btn">Войти</button>
+      <button class="btn-outline" onclick="toggleAuthMode()" id="toggle-auth-btn">Зарегистрироваться</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН РАСПИСАНИЯ -->
+  <div class="screen" id="screen-schedule">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+      <h1 style="margin: 0;">⚛️ Расписание</h1>
+      <button onclick="logout()" class="btn-red btn-sm" style="margin: 0;">Выйти</button>
+    </div>
+    
+    <!-- Сюда вставляется расписание (оно длинное, я оставила его как в прошлом коде) -->
+    <div class="card">
+      <h2>🧬 Понедельник</h2>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Иностранный язык</div>
+          <div class="class-teacher">Пахотина С.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 17</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 36</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">14:05</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 16</div>
+          <div class="class-type">Лабораторная</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">15:45</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 16</div>
+          <div class="class-type">Лабораторная</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Вторник</h2>
+      <div class="class-item">
+        <div class="class-time">08:30</div>
+        <div class="class-info">
+          <div class="class-subject">Иностранный язык</div>
+          <div class="class-teacher">Пахотина С.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 17</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">История России</div>
+          <div class="class-teacher">Иванов К.С.</div>
+          <div class="class-room">📍 ИПИ-5 / 34</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Математические методы...</div>
+          <div class="class-teacher">Галашов К.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 36</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">14:05</div>
+        <div class="class-info">
+          <div class="class-subject">Физическая культура</div>
+          <div class="class-teacher">Осипенко С.С.</div>
+          <div class="class-room">📍 ИПИ-6 / Спортзал</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Среда</h2>
+      <div class="class-item">
+        <div class="class-time">08:30</div>
+        <div class="class-info">
+          <div class="class-subject">Метеорология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Метеорология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Гидрология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">14:05</div>
+        <div class="class-info">
+          <div class="class-subject">Гидрология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Четверг</h2>
+      <div class="class-item">
+        <div class="class-time">08:30</div>
+        <div class="class-info">
+          <div class="class-subject">Математические методы...</div>
+          <div class="class-teacher">Галашов К.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 36</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-1 / 10</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 16</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">14:05</div>
+        <div class="class-info">
+          <div class="class-subject">Физическая культура</div>
+          <div class="class-teacher">Осипенко С.С.</div>
+          <div class="class-room">📍 ИПИ-6 / Спортзал</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Пятница</h2>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 20</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 16</div>
+          <div class="class-type">Лабораторная</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Суббота</h2>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Метеорология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Метеорология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН ОТЧЕТОВ -->
+  <div class="screen" id="screen-reports">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+      <h1 style="margin: 0;">📊 Отчёты</h1>
+      <button onclick="logout()" class="btn-red btn-sm" style="margin: 0;">Выйти</button>
+    </div>
+
+    <div class="card" id="mark-block" style="border-color: var(--accent); box-shadow: 0 0 20px rgba(52, 211, 153, 0.1);">
+      <h2 style="color: var(--accent);">🧪 Отметка на сегодня</h2>
+      <div class="grid">
+        <button class="btn-green" onclick="markAttendance('Буду')">Буду</button>
+        <button class="btn-yellow" onclick="markAttendance('Опоздаю')">Опоздаю</button>
+      </div>
+      <div id="mark-msg" class="status-msg"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h2 style="margin:0; border:none;">Данные</h2>
+        <button onclick="downloadExcel()" class="btn-primary btn-sm" style="margin: 0;">В Excel</button>
+      </div>
+      <table>
+        <thead><tr><th>ФИО</th><th>Статус</th></tr></thead>
+        <tbody id="report-body"><tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- НИЖНЕЕ МЕНЮ -->
+  <div class="bottom-nav hidden" id="main-nav">
+    <div class="nav-item active" onclick="show('screen-schedule', this)"><div class="nav-icon">📅</div>Расписание</div>
+    <div class="nav-item" onclick="show('screen-reports', this)"><div class="nav-icon">📊</div>Отчёты</div>
+  </div>
+
+<script>
+  let currentRole = 'student';
+  let isLoginMode = true; 
+  let userRole = 'student';
+  
+  const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const tg = window.Telegram.WebApp;
+  if (tg && tg.ready) { tg.ready(); tg.expand(); }
+
+  function setRole(role) {
+    currentRole = role;
+    document.getElementById('role-student').classList.remove('active');
+    document.getElementById('role-teacher').classList.remove('active');
+    if (role === 'student') document.getElementById('role-student').classList.add('active');
+    else document.getElementById('role-teacher').classList.add('active');
+  }
+
+  function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    document.getElementById('main-auth-btn').innerText = isLoginMode ? 'Войти' : 'Зарегистрироваться';
+    document.getElementById('toggle-auth-btn').innerText = isLoginMode ? 'Зарегистрироваться' : 'У меня есть аккаунт';
+    document.getElementById('name-field').style.display = isLoginMode ? 'none' : 'block';
+  }
+
+  async function handleAuth() {
+    const name = document.getElementById('auth-name').value;
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-pass').value;
+    const btn = document.getElementById('main-auth-btn');
+
+    if (!email || !password) return alert('Введи email и пароль');
+    if (!isLoginMode && !name) return alert('Введи ФИО');
+    
+    btn.innerText = 'Загрузка...'; btn.disabled = true;
+
+    try {
+      if (isLoginMode) {
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        
+        userRole = data.user.user_metadata?.role || 'student';
+        if (userRole === 'teacher') document.getElementById('mark-block').classList.add('hidden');
+        else document.getElementById('mark-block').classList.remove('hidden');
+
+        document.getElementById('screen-auth').classList.remove('active');
+        document.getElementById('main-nav').classList.remove('hidden');
+        show('screen-schedule', document.querySelector('.nav-item'));
+        loadReport();
+      } else {
+        const { error } = await _supabase.auth.signUp({ 
+          email, password, options: { data: { role: currentRole, full_name: name } }
+        });
+        if (error) throw error;
+        alert('Регистрация успешна! Войди.');
+        toggleAuthMode(); 
+      }
+    } catch (error) {
+      alert('Ошибка: ' + error.message);
+    } finally {
+      btn.innerText = isLoginMode ? 'Войти' : 'Зарегистрироваться';
+      btn.disabled = false;
+    }
+  }
+
+  async function logout() {
+    await _supabase.auth.signOut();
+    document.getElementById('main-nav').classList.add('hidden');
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-auth').classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector('.nav-item').classList.add('active');
+    document.getElementById('auth-pass').value = ''; 
+  }
+
+  function show(screenId, navElement) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    if (navElement) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      navElement.classList.add('active');
+    }
+    if (screenId === 'screen-reports') loadReport();
+    window.scrollTo(0, 0);
+  }
+
+  async function markAttendance(status) {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return alert('Ошибка: ты не авторизован');
+
+    const msg = document.getElementById('mark-msg');
+    msg.innerText = 'Отправка...'; 
+    msg.style.color = 'var(--text-muted)';
+
+    const userName = user.user_metadata?.full_name || 'Без имени';
+    const todayDate = new Date().toLocaleDateString('ru-RU');
+
+    const { data: existing } = await _supabase.from('attendance').select('id').eq('user_id', user.id).eq('date', todayDate).single();
+
+    let error;
+    if (existing) {
+      const { error: updateError } = await _supabase.from('attendance').update({ status: status, user_name: userName }).eq('id', existing.id);
+      error = updateError;
+    } else {
+      const { error: insertError } = await _supabase.from('attendance').insert([{ user_id: user.id, user_email: user.email, user_name: userName, status: status, date: todayDate }]);
+      error = insertError;
+    }
+
+    if (error) { msg.innerText = 'Ошибка: ' + error.message; msg.style.color = 'var(--danger)'; } 
+    else { msg.innerText = 'Успешно: ' + status; msg.style.color = 'var(--accent)'; msg.style.textShadow = '0 0 10px rgba(52, 211, 153, 0.5)'; loadReport(); }
+  }
+
+  async function loadReport() {
+    const tbody = document.getElementById('report-body');
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr>';
+    const { data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }).limit(20);
+    if (error) return tbody.innerHTML = '<tr><td colspan="2">Ошибка: ' + error.message + '</td></tr>';
+    if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Пока нет отметок</td></tr>';
+    
+    tbody.innerHTML = '';
+    data.forEach(row => {
+      let badgeClass = 'bg-green';
+      if (row.status === 'Опоздаю') badgeClass = 'bg-yellow';
+      if (row.status === 'Не буду') badgeClass = 'bg-red';
+      tbody.innerHTML += `<tr><td>${row.user_name || 'Без имени'}</td><td><span class="badge ${badgeClass}">${row.status}</span></td></tr>`;
+    });
+  }
+
+  async function downloadExcel() {
+    const { data, error } = await _supabase.from('attendance').select('*');
+    if (error) return alert('Ошибка при выгрузке: ' + error.message);
+    if (data.length === 0) return alert('Нет данных для выгрузки');
+
+    const rows = [['Дата', 'ФИО', 'Email', 'Статус']];
+    data.forEach(row => {
+      rows.push([row.date, row.user_name || 'Без имени', row.user_email, row.status]);
+    });
+
+    const csv = rows.map(r => r.join(';')).join('\n');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
+    link.download = 'посещаемость.csv';
+    link.click();
+  }
+</script>
+</body>
+</html>
