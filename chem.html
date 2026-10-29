@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Хим-Помощник старосты</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0f0a17;
+    --card-bg: #1a1126;
+    --primary: #9b59b6;
+    --primary-glow: #c39bd3;
+    --accent: #2ecc71;
+    --text: #e0d8eb;
+    --text-muted: #8e7aa6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { 
+    background-color: var(--bg); 
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(155, 89, 182, 0.15) 0%, transparent 60%),
+      linear-gradient(0deg, transparent 24%, rgba(155, 89, 182, 0.05) 25%, rgba(155, 89, 182, 0.05) 26%, transparent 27%, transparent 74%, rgba(155, 89, 182, 0.05) 75%, rgba(155, 89, 182, 0.05) 76%, transparent 77%, transparent),
+      linear-gradient(90deg, transparent 24%, rgba(155, 89, 182, 0.05) 25%, rgba(155, 89, 182, 0.05) 26%, transparent 27%, transparent 74%, rgba(155, 89, 182, 0.05) 75%, rgba(155, 89, 182, 0.05) 76%, transparent 77%, transparent);
+    background-size: 100% 100%, 50px 50px, 50px 50px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+    padding: 16px; 
+    color: var(--text); 
+    margin: 0;
+  }
+  .card { 
+    background: var(--card-bg); 
+    border: 1px solid rgba(155, 89, 182, 0.3);
+    border-radius: 16px; 
+    padding: 20px; 
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(155, 89, 182, 0.1); 
+    margin-bottom: 16px; 
+    backdrop-filter: blur(10px);
+  }
+  h1 { color: var(--primary-glow); font-size: 24px; margin-bottom: 10px; text-shadow: 0 0 10px rgba(195, 155, 211, 0.5); display: flex; align-items: center; gap: 8px; }
+  h2 { color: var(--text); font-size: 18px; margin-top: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(155, 89, 182, 0.2); padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid rgba(155, 89, 182, 0.4); border-radius: 10px; box-sizing: border-box; font-size: 16px; background: rgba(0,0,0,0.2); color: var(--text); outline: none; transition: 0.3s; }
+  input:focus { border-color: var(--primary-glow); box-shadow: 0 0 10px rgba(155, 89, 182, 0.3); }
+  button { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 12px; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
+  .btn-primary { background: var(--primary); color: white; box-shadow: 0 0 15px rgba(155, 89, 182, 0.4); }
+  .btn-primary:active { transform: scale(0.98); box-shadow: 0 0 5px rgba(155, 89, 182, 0.6); }
+  .btn-outline { background: transparent; color: var(--primary-glow); border: 2px solid var(--primary); }
+  .btn-green { background: rgba(46, 204, 113, 0.2); color: var(--accent); border: 1px solid var(--accent); box-shadow: 0 0 10px rgba(46, 204, 113, 0.2); }
+  .btn-yellow { background: rgba(241, 196, 15, 0.2); color: #f1c40f; border: 1px solid #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.2); }
+  
+  .class-item { display: flex; gap: 12px; margin-bottom: 15px; border-bottom: 1px dashed rgba(155, 89, 182, 0.2); padding-bottom: 15px; }
+  .class-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .class-time { font-weight: bold; color: var(--primary-glow); width: 50px; flex-shrink: 0; font-size: 14px; padding-top: 2px; }
+  .class-info { flex-grow: 1; }
+  .class-subject { font-weight: bold; font-size: 16px; margin-bottom: 6px; color: #fff; }
+  .class-teacher { font-style: italic; color: var(--text-muted); font-size: 13px; margin-bottom: 6px; }
+  .class-room { color: var(--accent); font-weight: bold; font-size: 13px; margin-bottom: 6px; }
+  .class-type { font-size: 11px; background: rgba(155, 89, 182, 0.2); border: 1px solid rgba(155, 89, 182, 0.5); padding: 3px 10px; border-radius: 12px; display: inline-block; color: var(--primary-glow); }
+  
+  .hidden { display: none; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  
+  .status-msg { text-align: center; margin-top: 10px; font-weight: bold; font-size: 14px; }
+</style>
+</head>
+<body>
+
+  <!-- ЭКРАН ВХОДА -->
+  <div id="screen-auth">
+    <h1>🧪 Хим-Помощник</h1>
+    <div class="card">
+      <input type="email" id="auth-email" placeholder="Email (например, chem@mail.ru)">
+      <input type="password" id="auth-pass" placeholder="Пароль">
+      <button class="btn-primary" onclick="handleAuth()" id="main-auth-btn">Войти</button>
+      <button class="btn-outline" onclick="toggleAuthMode()" id="toggle-auth-btn">Зарегистрироваться</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН РАСПИСАНИЯ -->
+  <div id="screen-schedule" class="hidden">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+      <h1 style="margin: 0;">⚛️ Расписание</h1>
+      <button onclick="logout()" style="width: auto; background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; padding: 8px 12px; font-size: 12px; margin: 0;">Выйти</button>
+    </div>
+    
+    <div class="card">
+      <h2>🧬 Понедельник</h2>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Иностранный язык</div>
+          <div class="class-teacher">Пахотина С.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 17</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 36</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">14:05</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 16</div>
+          <div class="class-type">Лабораторная</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">15:45</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 16</div>
+          <div class="class-type">Лабораторная</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Вторник</h2>
+      <div class="class-item">
+        <div class="class-time">08:30</div>
+        <div class="class-info">
+          <div class="class-subject">Иностранный язык</div>
+          <div class="class-teacher">Пахотина С.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 17</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">История России</div>
+          <div class="class-teacher">Иванов К.С.</div>
+          <div class="class-room">📍 ИПИ-5 / 34</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Математические методы...</div>
+          <div class="class-teacher">Галашов К.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 36</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">14:05</div>
+        <div class="class-info">
+          <div class="class-subject">Физическая культура</div>
+          <div class="class-teacher">Осипенко С.С.</div>
+          <div class="class-room">📍 ИПИ-6 / Спортзал</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Среда</h2>
+      <div class="class-item">
+        <div class="class-time">08:30</div>
+        <div class="class-info">
+          <div class="class-subject">Метеорология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Метеорология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Гидрология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">14:05</div>
+        <div class="class-info">
+          <div class="class-subject">Гидрология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Четверг</h2>
+      <div class="class-item">
+        <div class="class-time">08:30</div>
+        <div class="class-info">
+          <div class="class-subject">Математические методы...</div>
+          <div class="class-teacher">Галашов К.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 36</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-1 / 10</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 16</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">14:05</div>
+        <div class="class-info">
+          <div class="class-subject">Физическая культура</div>
+          <div class="class-teacher">Осипенко С.С.</div>
+          <div class="class-room">📍 ИПИ-6 / Спортзал</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Пятница</h2>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 20</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Общая химия</div>
+          <div class="class-teacher">Шавнин А.А.</div>
+          <div class="class-room">📍 ИПИ-5 / 16</div>
+          <div class="class-type">Лабораторная</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Суббота</h2>
+      <div class="class-item">
+        <div class="class-time">10:10</div>
+        <div class="class-info">
+          <div class="class-subject">Метеорология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Лекция</div>
+        </div>
+      </div>
+      <div class="class-item">
+        <div class="class-time">12:25</div>
+        <div class="class-info">
+          <div class="class-subject">Метеорология</div>
+          <div class="class-teacher">Губанова Л.В.</div>
+          <div class="class-room">📍 ИПИ-5 / 11</div>
+          <div class="class-type">Практика</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" style="border-color: var(--accent); box-shadow: 0 0 20px rgba(46, 204, 113, 0.15);">
+      <h2 style="color: var(--accent);">🧪 Посещаемость</h2>
+      <div class="grid">
+        <button class="btn-green" onclick="markAttendance('Буду')">Буду</button>
+        <button class="btn-yellow" onclick="markAttendance('Опоздаю')">Опоздаю</button>
+      </div>
+      <div id="mark-msg" class="status-msg"></div>
+    </div>
+  </div>
+
+<script>
+  let isLoginMode = true;
+  const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    document.getElementById('main-auth-btn').innerText = isLoginMode ? 'Войти' : 'Зарегистрироваться';
+    document.getElementById('toggle-auth-btn').innerText = isLoginMode ? 'Зарегистрироваться' : 'У меня есть аккаунт';
+  }
+
+  async function handleAuth() {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-pass').value;
+    const btn = document.getElementById('main-auth-btn');
+    
+    if (!email || !password) return alert('Введи email и пароль');
+    btn.innerText = 'Загрузка...';
+
+    try {
+      if (isLoginMode) {
+        const { error } = await _supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        document.getElementById('screen-auth').classList.add('hidden');
+        document.getElementById('screen-schedule').classList.remove('hidden');
+      } else {
+        const { error } = await _supabase.auth.signUp({ email, password, options: { data: { role: 'student', full_name: 'Химик' } } });
+        if (error) throw error;
+        alert('Регистрация успешна! Войди.');
+        toggleAuthMode(); 
+      }
+    } catch (error) {
+      alert('Ошибка: ' + error.message);
+    } finally {
+      btn.innerText = isLoginMode ? 'Войти' : 'Зарегистрироваться';
+    }
+  }
+
+  async function logout() {
+    await _supabase.auth.signOut();
+    document.getElementById('screen-schedule').classList.add('hidden');
+    document.getElementById('screen-auth').classList.remove('hidden');
+  }
+
+  async function markAttendance(status) {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return alert('Нет авторизации');
+    
+    const msg = document.getElementById('mark-msg');
+    msg.innerText = 'Отправка...'; 
+    msg.style.color = 'var(--text-muted)';
+
+    const todayDate = new Date().toLocaleDateString('ru-RU');
+    const userName = user.user_metadata?.full_name || 'Студент';
+
+    const { data: existing } = await _supabase.from('attendance').select('id').eq('user_id', user.id).eq('date', todayDate).single();
+
+    let error;
+    if (existing) {
+      const { error: updateError } = await _supabase.from('attendance').update({ status: status, user_name: userName }).eq('id', existing.id);
+      error = updateError;
+    } else {
+      const { error: insertError } = await _supabase.from('attendance').insert([{ user_id: user.id, user_email: user.email, user_name: userName, status: status, date: todayDate }]);
+      error = insertError;
+    }
+
+    if (error) { 
+      msg.innerText = 'Ошибка: ' + error.message; 
+      msg.style.color = '#e74c3c'; 
+    } else { 
+      msg.innerText = 'Успешно: ' + status; 
+      msg.style.color = 'var(--accent)'; 
+      msg.style.textShadow = '0 0 10px rgba(46, 204, 113, 0.5)';
+    }
+  }
+</script>
+</body>
+</html>
