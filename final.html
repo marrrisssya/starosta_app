@@ -44,10 +44,11 @@
   .day-btn { padding: 8px 16px; border-radius: 20px; background: white; border: 1px solid #e0d0f0; white-space: nowrap; cursor: pointer; }
   .day-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
   
-  .class-item { display: flex; gap: 12px; margin-bottom: 12px; }
+  .class-item { display: flex; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid #f0e6ff; padding-bottom: 12px; }
+  .class-item:last-child { border-bottom: none; }
   .class-time { font-weight: bold; color: var(--primary); font-size: 14px; width: 50px; flex-shrink: 0; }
-  .class-info { flex-grow: 1; border-left: 3px solid var(--primary-light); padding-left: 12px; }
-  .class-subject { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+  .class-info { flex-grow: 1; }
+  .class-subject { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: var(--primary-dark); }
   .class-details { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.4; }
   .class-hw { font-size: 12px; background: #fff3cd; color: #856404; padding: 6px 10px; border-radius: 6px; margin-top: 6px; }
 
@@ -64,7 +65,7 @@
   .bg-red { background: #f8d7da; color: #721c24; }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .file-upload { border: 2px dashed var(--primary-light); padding: 20px; text-align: center; border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; }
+  .file-upload { border: 2px dashed var(--primary-light); padding: 20px; text-align: center; border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -72,22 +73,19 @@
   <div class="screen active" id="screen-auth">
     <h1 id="auth-title">Добро пожаловать!</h1>
     <p class="subtitle" id="auth-subtitle">Войди, чтобы управлять парами</p>
-    
     <div class="role-switch">
       <div id="role-student" class="role-btn active" onclick="setRole('student')">Студент</div>
       <div id="role-teacher" class="role-btn" onclick="setRole('teacher')">Преподаватель</div>
     </div>
-
     <div class="card">
       <div id="name-field" style="display: none;">
-        <label>ФИО (Фамилия Имя Отчество)</label>
+        <label>ФИО</label>
         <input type="text" id="auth-name" placeholder="Иванов Иван Иванович">
       </div>
       <label>Email</label>
       <input type="email" id="auth-email" placeholder="student@mail.ru">
       <label>Пароль</label>
       <input type="password" id="auth-pass" placeholder="••••••••">
-      
       <button type="button" class="btn-primary" onclick="handleAuth()" id="main-auth-btn" style="margin-bottom: 10px;">Войти</button>
       <button type="button" class="btn-outline" onclick="toggleAuthMode()" id="toggle-auth-btn">Зарегистрироваться</button>
     </div>
@@ -98,36 +96,29 @@
       <h1>Расписание</h1>
       <button type="button" class="btn-danger btn-sm" onclick="logout()">Выйти</button>
     </div>
+    
     <div class="tabs">
-      <div class="tab active" onclick="alert('Вид на день уже открыт!')">На день</div>
-      <div class="tab" onclick="alert('Вид на неделю будет в следующем обновлении')">На неделю</div>
+      <div class="tab active" onclick="switchView('day')">На день</div>
+      <div class="tab" onclick="switchView('week')">На неделю</div>
     </div>
-    <div id="schedule-view">
-      <div class="day-selector">
-        <div class="day-btn active">Пн</div>
-        <div class="day-btn" onclick="alert('Вторник пока пуст')">Вт</div>
-        <div class="day-btn" onclick="alert('Среда пока пуста')">Ср</div>
-        <div class="day-btn" onclick="alert('Четверг пока пуст')">Чт</div>
-        <div class="day-btn" onclick="alert('Пятница пока пуста')">Пт</div>
+
+    <div class="day-selector" id="day-selector">
+      <!-- Дни недели добавляются скриптом -->
+    </div>
+
+    <div class="card" id="schedule-card">
+      <p style="text-align: center; color: gray; padding: 20px;">Загрузка расписания...</p>
+    </div>
+
+    <!-- Блок загрузки .ics (только для старосты) -->
+    <div class="card">
+      <h2>Загрузить расписание (.ics)</h2>
+      <p class="subtitle" style="margin-bottom:10px;">Выбери файл из деканата</p>
+      <input type="file" id="ics-file" accept=".ics" style="display: none;" onchange="handleFileUpload(event)">
+      <div class="file-upload" onclick="document.getElementById('ics-file').click()">
+        + Выбрать файл .ics
       </div>
-      <div class="card">
-        <div class="class-item">
-          <div class="class-time">09:00</div>
-          <div class="class-info">
-            <div class="class-subject">Математика (Лекция)</div>
-            <div class="class-details">Иванов И.И. • Ауд. 301</div>
-            <div class="class-hw">ДЗ: Решить задачи 1-5 из методички</div>
-          </div>
-        </div>
-        <div class="class-item">
-          <div class="class-time">10:40</div>
-          <div class="class-info">
-            <div class="class-subject">Программирование (Практика)</div>
-            <div class="class-details">Петрова А.С. • Ауд. 205</div>
-            <div class="class-hw">ДЗ: Написать калькулятор на Python</div>
-          </div>
-        </div>
-      </div>
+      <button type="button" class="btn-outline btn-sm" onclick="downloadTemplate()" style="width: 100%;">Скачать шаблон для заполнения</button>
     </div>
   </div>
 
@@ -136,21 +127,18 @@
     <p class="subtitle">Лекции, практики и лабораторные</p>
     <div class="card">
       <div class="tabs" style="margin-bottom: 10px;">
-        <div class="tab active" onclick="alert('Вкладка Лекции активна')">Лекции</div>
+        <div class="tab active">Лекции</div>
         <div class="tab" onclick="alert('Вкладка Практики скоро появится')">Практики</div>
         <div class="tab" onclick="alert('Вкладка Лабы скоро появится')">Лабы</div>
       </div>
       <div style="font-size: 14px;">
-        <p style="margin-bottom: 10px;">📄 <b>Лекция 1. Введение</b> (PDF, 2 МБ) <button type="button" class="btn-sm btn-outline" style="float:right;" onclick="alert('Файл начнет скачиваться (в будущем)')">Скачать</button></p>
-        <p>📄 <b>Лекция 2. Основы</b> (PDF, 3 МБ) <button type="button" class="btn-sm btn-outline" style="float:right;" onclick="alert('Файл начнет скачиваться (в будущем)')">Скачать</button></p>
+        <p style="margin-bottom: 10px;">📄 <b>Лекция 1. Введение</b> (PDF, 2 МБ) <button type="button" class="btn-sm btn-outline" style="float:right;" onclick="alert('В реальной версии здесь будет скачивание')">Скачать</button></p>
       </div>
     </div>
   </div>
 
   <div class="screen" id="screen-reports">
     <h1>Посещаемость</h1>
-    
-    <!-- Блок отметки (скрыт для преподавателей) -->
     <div class="card" id="mark-block" style="background: var(--primary-dark); color: white;">
       <h2 style="color:white; margin-bottom: 5px;">Отметка на сегодня</h2>
       <p style="font-size: 13px; opacity: 0.8; margin-bottom: 15px;">Выбери свой статус ниже</p>
@@ -172,12 +160,6 @@
         <tbody id="report-body"><tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr></tbody>
       </table>
     </div>
-
-    <div class="card">
-      <h2>Загрузка расписания (.ics)</h2>
-      <p class="subtitle" style="margin-bottom:10px;">Только для старосты</p>
-      <div class="file-upload" onclick="alert('В реальном приложении здесь откроется выбор файла!')">+ Выбрать файл .ics</div>
-    </div>
   </div>
 
   <div class="bottom-nav" id="main-nav" style="display: none;">
@@ -189,14 +171,32 @@
 <script>
   let currentRole = 'student';
   let isLoginMode = true; 
-  let userRole = 'student'; // Роль текущего пользователя
-
+  let userRole = 'student';
+  let currentView = 'day';
+  let currentDay = 'Пн'; // Текущий выбранный день
+  
   const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const tg = window.Telegram.WebApp;
   if (tg && tg.ready) { tg.ready(); tg.expand(); }
+
+  // Инициализация дней недели
+  const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+  const daySelector = document.getElementById('day-selector');
+  days.forEach(day => {
+    const btn = document.createElement('div');
+    btn.className = `day-btn ${day === 'Пн' ? 'active' : ''}`;
+    btn.innerText = day;
+    btn.onclick = () => {
+      document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentDay = day;
+      renderSchedule();
+    };
+    daySelector.appendChild(btn);
+  });
 
   function setRole(role) {
     currentRole = role;
@@ -231,26 +231,21 @@
         const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         
-        // Получаем роль из метаданных
         userRole = data.user.user_metadata?.role || 'student';
-        
-        // Скрываем кнопки отметки, если это препод
-        if (userRole === 'teacher') {
-          document.getElementById('mark-block').style.display = 'none';
-        } else {
-          document.getElementById('mark-block').style.display = 'block';
-        }
+        if (userRole === 'teacher') document.getElementById('mark-block').style.display = 'none';
+        else document.getElementById('mark-block').style.display = 'block';
 
         document.getElementById('screen-auth').classList.remove('active');
         document.getElementById('main-nav').style.display = 'flex';
         show('screen-schedule');
+        renderSchedule(); // Отрисовываем расписание при входе
         loadReport();
       } else {
         const { error } = await _supabase.auth.signUp({ 
           email, password, options: { data: { role: currentRole, full_name: name } }
         });
         if (error) throw error;
-        alert('Регистрация успешна! Теперь ты можешь войти.');
+        alert('Регистрация успешна! Войди.');
         toggleAuthMode(); 
       }
     } catch (error) {
@@ -282,6 +277,174 @@
     window.scrollTo(0, 0);
   }
 
+  // --- ЛОГИКА РАСПИСАНИЯ (.ics) ---
+  function switchView(view) {
+    currentView = view;
+    document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+    if (view === 'day') document.querySelector('.tabs .tab:nth-child(1)').classList.add('active');
+    else document.querySelector('.tabs .tab:nth-child(2)').classList.add('active');
+    renderSchedule();
+  }
+
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const content = e.target.result;
+      parseICS(content);
+    };
+    reader.readAsText(file);
+  }
+
+  function parseICS(icsText) {
+    const events = [];
+    const lines = icsText.split(/\r?\n/);
+    let currentEvent = null;
+
+    lines.forEach(line => {
+      if (line.startsWith('BEGIN:VEVENT')) currentEvent = {};
+      else if (line.startsWith('END:VEVENT') && currentEvent) {
+        events.push(currentEvent);
+        currentEvent = null;
+      }
+      else if (currentEvent) {
+        if (line.startsWith('SUMMARY:')) currentEvent.summary = line.replace('SUMMARY:', '').trim();
+        if (line.startsWith('DTSTART:')) {
+          const dateStr = line.replace('DTSTART:', '').trim();
+          currentEvent.start = dateStr; 
+        }
+        if (line.startsWith('DTEND:')) {
+           const dateStr = line.replace('DTEND:', '').trim();
+           currentEvent.end = dateStr;
+        }
+        if (line.startsWith('LOCATION:')) currentEvent.location = line.replace('LOCATION:', '').trim();
+        if (line.startsWith('DESCRIPTION:')) currentEvent.description = line.replace('DESCRIPTION:', '').trim();
+      }
+    });
+
+    // Сохраняем расписание в память браузера
+    localStorage.setItem('mySchedule', JSON.stringify(events));
+    alert('Расписание успешно загружено!');
+    renderSchedule();
+  }
+
+  function renderSchedule() {
+    const card = document.getElementById('schedule-card');
+    const scheduleData = JSON.parse(localStorage.getItem('mySchedule'));
+    
+    if (!scheduleData || scheduleData.length === 0) {
+      card.innerHTML = '<p style="text-align: center; color: gray; padding: 20px;">Расписание пока не загружено. Загрузи файл .ics ниже.</p>';
+      return;
+    }
+
+    // Если вид "На день"
+    if (currentView === 'day') {
+      document.getElementById('day-selector').style.display = 'flex';
+      
+      const dayMap = { 'Пн': 1, 'Вт': 2, 'Ср': 3, 'Чт': 4, 'Пт': 5, 'Сб': 6, 'Вс': 0 };
+      const targetDayNum = dayMap[currentDay];
+      
+      const todaysEvents = scheduleData.filter(ev => {
+        if (!ev.start) return false;
+        const dt = ev.start.includes('T') ? ev.start.split('T')[0] : ev.start;
+        const d = new Date(dt);
+        return d.getDay() === targetDayNum;
+      });
+
+      if (todaysEvents.length === 0) {
+        card.innerHTML = `<p style="text-align: center; color: gray; padding: 20px;">На ${currentDay} пар нет</p>`;
+        return;
+      }
+
+      let html = '';
+      todaysEvents.sort((a, b) => a.start.localeCompare(b.start)).forEach(ev => {
+        let timeStr = 'Весь день';
+        if (ev.start && ev.start.includes('T')) {
+          timeStr = ev.start.split('T')[1].substring(0,5) + ' - ' + (ev.end ? ev.end.split('T')[1].substring(0,5) : '');
+        }
+        
+        html += `
+          <div class="class-item">
+            <div class="class-time">${timeStr}</div>
+            <div class="class-info">
+              <div class="class-subject">${ev.summary || 'Без названия'}</div>
+              <div class="class-details">${ev.location || 'Аудитория не указана'}</div>
+              ${ev.description ? `<div class="class-hw">${ev.description}</div>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      card.innerHTML = html;
+    } 
+    // Если вид "На неделю"
+    else {
+      document.getElementById('day-selector').style.display = 'none';
+      
+      let html = '';
+      days.forEach(day => {
+        const dayMap = { 'Пн': 1, 'Вт': 2, 'Ср': 3, 'Чт': 4, 'Пт': 5, 'Сб': 6 };
+        const targetDayNum = dayMap[day];
+        
+        const dayEvents = scheduleData.filter(ev => {
+          if (!ev.start) return false;
+          const dt = ev.start.includes('T') ? ev.start.split('T')[0] : ev.start;
+          const d = new Date(dt);
+          return d.getDay() === targetDayNum;
+        });
+
+        if (dayEvents.length > 0) {
+          html += `<h3 style="margin-top: 15px; margin-bottom: 10px; color: var(--primary);">${day}</h3>`;
+          dayEvents.sort((a, b) => a.start.localeCompare(b.start)).forEach(ev => {
+            let timeStr = '';
+            if (ev.start && ev.start.includes('T')) timeStr = ev.start.split('T')[1].substring(0,5);
+            html += `
+              <div class="class-item" style="padding-bottom: 8px; margin-bottom: 8px;">
+                <div class="class-time">${timeStr}</div>
+                <div class="class-info">
+                  <div class="class-subject" style="font-size: 14px;">${ev.summary || 'Без названия'}</div>
+                  <div class="class-details">${ev.location || ''}</div>
+                </div>
+              </div>
+            `;
+          });
+        }
+      });
+      
+      if (html === '') card.innerHTML = '<p style="text-align: center; color: gray; padding: 20px;">На неделе пар нет</p>';
+      else card.innerHTML = html;
+    }
+  }
+
+  // Скачивание шаблона .ics
+  function downloadTemplate() {
+    const template = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//My Schedule//RU
+BEGIN:VEVENT
+SUMMARY:Математика (Лекция)
+DTSTART:20261026T090000
+DTEND:20261026T103000
+LOCATION:Ауд. 301, Иванов И.И.
+DESCRIPTION:ДЗ: Решить задачи 1-5
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Программирование
+DTSTART:20261027T104000
+DTEND:20261027T121000
+LOCATION:Ауд. 205, Петрова А.С.
+DESCRIPTION:ДЗ: Написать калькулятор
+END:VEVENT
+END:VCALENDAR`;
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([template], { type: 'text/calendar' }));
+    link.download = 'template.ics';
+    link.click();
+  }
+
+  // --- ОТМЕТКИ ---
   async function markAttendance(status) {
     const { data: { user } } = await _supabase.auth.getUser();
     if (!user) return alert('Ошибка: ты не авторизован');
@@ -292,47 +455,28 @@
     const userName = user.user_metadata?.full_name || 'Без имени';
     const todayDate = new Date().toLocaleDateString('ru-RU');
 
-    // Сначала проверяем, есть ли уже отметка на сегодня
-    const { data: existing } = await _supabase
-      .from('attendance')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('date', todayDate)
-      .single();
+    const { data: existing } = await _supabase.from('attendance').select('id').eq('user_id', user.id).eq('date', todayDate).single();
 
     let error;
     if (existing) {
-      // Если есть — обновляем
-      const { error: updateError } = await _supabase
-        .from('attendance')
-        .update({ status: status, user_name: userName })
-        .eq('id', existing.id);
+      const { error: updateError } = await _supabase.from('attendance').update({ status: status, user_name: userName }).eq('id', existing.id);
       error = updateError;
     } else {
-      // Если нет — создаем новую
-      const { error: insertError } = await _supabase
-        .from('attendance')
-        .insert([{ user_id: user.id, user_email: user.email, user_name: userName, status: status, date: todayDate }]);
+      const { error: insertError } = await _supabase.from('attendance').insert([{ user_id: user.id, user_email: user.email, user_name: userName, status: status, date: todayDate }]);
       error = insertError;
     }
 
-    if (error) {
-      msg.innerText = 'Ошибка: ' + error.message; msg.style.color = '#ffb3b3';
-    } else {
-      msg.innerText = 'Успешно: ' + status; msg.style.color = '#d4edda';
-      loadReport();
-    }
+    if (error) { msg.innerText = 'Ошибка: ' + error.message; msg.style.color = '#ffb3b3'; } 
+    else { msg.innerText = 'Успешно: ' + status; msg.style.color = '#d4edda'; loadReport(); }
   }
 
   async function loadReport() {
     const tbody = document.getElementById('report-body');
     tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr>';
-
     const { data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }).limit(20);
-
     if (error) return tbody.innerHTML = '<tr><td colspan="2">Ошибка загрузки: ' + error.message + '</td></tr>';
     if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Пока нет отметок</td></tr>';
-
+    
     tbody.innerHTML = '';
     data.forEach(row => {
       let badgeClass = 'bg-green';
@@ -360,4 +504,4 @@
   }
 </script>
 </body>
-</html> 
+        </html>
