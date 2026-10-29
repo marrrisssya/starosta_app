@@ -97,8 +97,8 @@
       <label>Пароль</label>
       <input type="password" id="auth-pass" placeholder="••••••••">
       
-      <button class="btn-primary" onclick="handleAuth()" id="main-auth-btn" style="margin-bottom: 10px;">Войти</button>
-      <button class="btn-outline" onclick="toggleAuthMode()" id="toggle-auth-btn">Зарегистрироваться</button>
+      <button type="button" class="btn-primary" onclick="handleAuth()" id="main-auth-btn" style="margin-bottom: 10px;">Войти</button>
+      <button type="button" class="btn-outline" onclick="toggleAuthMode()" id="toggle-auth-btn">Зарегистрироваться</button>
     </div>
   </div>
 
@@ -106,7 +106,7 @@
   <div class="screen" id="screen-schedule">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
       <h1>Расписание</h1>
-      <button class="btn-danger btn-sm" onclick="logout()">Выйти</button>
+      <button type="button" class="btn-danger btn-sm" onclick="logout()">Выйти</button>
     </div>
 
     <div class="tabs">
@@ -156,8 +156,8 @@
         <div class="tab" onclick="alert('Вкладка Лабы скоро появится')">Лабы</div>
       </div>
       <div style="font-size: 14px;">
-        <p style="margin-bottom: 10px;">📄 <b>Лекция 1. Введение</b> (PDF, 2 МБ) <button class="btn-sm btn-outline" style="float:right;" onclick="alert('Файл начнет скачиваться (в будущем)')">Скачать</button></p>
-        <p>📄 <b>Лекция 2. Основы</b> (PDF, 3 МБ) <button class="btn-sm btn-outline" style="float:right;" onclick="alert('Файл начнет скачиваться (в будущем)')">Скачать</button></p>
+        <p style="margin-bottom: 10px;">📄 <b>Лекция 1. Введение</b> (PDF, 2 МБ) <button type="button" class="btn-sm btn-outline" style="float:right;" onclick="alert('Файл начнет скачиваться (в будущем)')">Скачать</button></p>
+        <p>📄 <b>Лекция 2. Основы</b> (PDF, 3 МБ) <button type="button" class="btn-sm btn-outline" style="float:right;" onclick="alert('Файл начнет скачиваться (в будущем)')">Скачать</button></p>
       </div>
     </div>
   </div>
@@ -170,16 +170,16 @@
       <h2 style="color:white; margin-bottom: 5px;">Отметка на сегодня</h2>
       <p style="font-size: 13px; opacity: 0.8; margin-bottom: 15px;">Среда, 24 октября</p>
       <div class="grid">
-        <button class="btn-sm" style="background:var(--success); color:white;" onclick="alert('Ты будешь!')">Буду</button>
-        <button class="btn-sm" style="background:var(--warning); color:white;" onclick="alert('Опоздаю!')">Опоздаю</button>
-        <button class="btn-sm" style="background:var(--danger); color:white; grid-column: span 2;" onclick="alert('Не приду(')">Не буду</button>
+        <button type="button" class="btn-sm" style="background:var(--success); color:white;" onclick="alert('Ты будешь!')">Буду</button>
+        <button type="button" class="btn-sm" style="background:var(--warning); color:white;" onclick="alert('Опоздаю!')">Опоздаю</button>
+        <button type="button" class="btn-sm" style="background:var(--danger); color:white; grid-column: span 2;" onclick="alert('Не приду(')">Не буду</button>
       </div>
     </div>
 
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h2 style="margin:0;">Отчёт старосты</h2>
-        <button class="btn-sm btn-primary" onclick="downloadExcel()">В Excel</button>
+        <button type="button" class="btn-sm btn-primary" onclick="downloadExcel()">В Excel</button>
       </div>
       <table>
         <thead><tr><th>Студент</th><th>Статус</th></tr></thead>
@@ -187,6 +187,138 @@
           <tr><td>Иванов И.</td><td><span class="badge bg-green">Буду</span></td></tr>
           <tr><td>Петрова А.</td><td><span class="badge bg-yellow">Опоздаю</span></td></tr>
           <tr><td>Сидоров К.</td><td><span class="badge bg-red">Не буду</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Загрузка расписания (.ics)</h2>
+      <p class="subtitle" style="margin-bottom:10px;">Только для старосты</p>
+      <div class="file-upload" onclick="alert('В реальной версии здесь откроется выбор файла!')">
+        + Выбрать файл .ics
+      </div>
+    </div>
+  </div>
+
+  <!-- Нижнее меню -->
+  <div class="bottom-nav" id="main-nav" style="display: none;">
+    <div class="nav-item active" onclick="show('screen-schedule', this)">
+      <div class="nav-icon">📅</div>Расписание
+    </div>
+    <div class="nav-item" onclick="show('screen-materials', this)">
+      <div class="nav-icon">📚</div>Материалы
+    </div>
+    <div class="nav-item" onclick="show('screen-reports', this)">
+      <div class="nav-icon">📊</div>Отчёты
+    </div>
+  </div>
+
+<script>
+  // --- ОБЪЯВЛЯЕМ ПЕРЕМЕННЫЕ В САМОМ НАЧАЛЕ ---
+  let currentRole = 'student';
+  let isLoginMode = true; 
+  
+  // --- ИНИЦИАЛИЗАЦИЯ SUPABASE ---
+  const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const tg = window.Telegram.WebApp;
+  if (tg && tg.ready) { tg.ready(); tg.expand(); }
+
+  function setRole(role, element) {
+    currentRole = role;
+    document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
+  }
+
+  function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    if (isLoginMode) {
+      document.getElementById('auth-title').innerText = 'Добро пожаловать!';
+      document.getElementById('auth-subtitle').innerText = 'Войди, чтобы управлять парами';
+      document.getElementById('main-auth-btn').innerText = 'Войти';
+      document.getElementById('toggle-auth-btn').innerText = 'Зарегистрироваться';
+    } else {
+      document.getElementById('auth-title').innerText = 'Создать аккаунт';
+      document.getElementById('auth-subtitle').innerText = 'Зарегистрируйся как ' + (currentRole === 'student' ? 'студент' : 'преподаватель');
+      document.getElementById('main-auth-btn').innerText = 'Зарегистрироваться';
+      document.getElementById('toggle-auth-btn').innerText = 'У меня уже есть аккаунт';
+    }
+  }
+
+  async function handleAuth() {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-pass').value;
+    const btn = document.getElementById('main-auth-btn');
+
+    if (!email || !password) { alert('Введи email и пароль'); return; }
+    
+    btn.innerText = 'Загрузка...';
+    btn.disabled = true;
+
+    try {
+      if (isLoginMode) {
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        loginSuccess();
+      } else {
+        const { data, error } = await _supabase.auth.signUp({ 
+          email, 
+          password,
+          options: { data: { role: currentRole } }
+        });
+        if (error) throw error;
+        
+        alert('Регистрация успешна! Теперь ты можешь войти.');
+        toggleAuthMode(); 
+      }
+    } catch (error) {
+      alert('Ошибка: ' + error.message);
+    } finally {
+      btn.innerText = isLoginMode ? 'Войти' : 'Зарегистрироваться';
+      btn.disabled = false;
+    }
+  }
+
+  function loginSuccess() {
+    document.getElementById('screen-auth').classList.remove('active');
+    document.getElementById('main-nav').style.display = 'flex';
+    show('screen-schedule');
+  }
+
+  async function logout() {
+    await _supabase.auth.signOut();
+    document.getElementById('main-nav').style.display = 'none';
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-auth').classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector('.nav-item').classList.add('active');
+    document.getElementById('auth-pass').value = ''; 
+  }
+
+  function show(screenId, navElement) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    if (navElement) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      navElement.classList.add('active');
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function downloadExcel() {
+    const rows = [['Студент', 'Статус'], ['Иванов И.', 'Буду']];
+    const csv = rows.map(r => r.join(';')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'посещаемость.csv';
+    link.click();
+  }
+</script>
+</body>
+        </html>an></td></tr>
         </tbody>
       </table>
     </div>
