@@ -7,18 +7,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root {
-    --primary: #7b2cbf;
-    --primary-light: #9d4edd;
-    --primary-dark: #3c096c;
-    --bg: #f8f5fc;
-    --card: #ffffff;
-    --text: #2b2b2b;
-    --text-muted: #6c757d;
-    --success: #2ecc71;
-    --warning: #f1c40f;
-    --danger: #e74c3c;
-  }
+  :root { --primary: #7b2cbf; --primary-light: #9d4edd; --primary-dark: #3c096c; --bg: #f8f5fc; --card: #ffffff; --text: #2b2b2b; --text-muted: #6c757d; --success: #2ecc71; --warning: #f1c40f; --danger: #e74c3c; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
   body { background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
   
@@ -80,7 +69,6 @@
 </head>
 <body>
 
-  <!-- ЭКРАН АВТОРИЗАЦИИ -->
   <div class="screen active" id="screen-auth">
     <h1 id="auth-title">Добро пожаловать!</h1>
     <p class="subtitle" id="auth-subtitle">Войди, чтобы управлять парами</p>
@@ -105,18 +93,15 @@
     </div>
   </div>
 
-  <!-- ЭКРАН РАСПИСАНИЯ -->
   <div class="screen" id="screen-schedule">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
       <h1>Расписание</h1>
       <button type="button" class="btn-danger btn-sm" onclick="logout()">Выйти</button>
     </div>
-
     <div class="tabs">
       <div class="tab active" onclick="alert('Вид на день уже открыт!')">На день</div>
       <div class="tab" onclick="alert('Вид на неделю будет в следующем обновлении')">На неделю</div>
     </div>
-
     <div id="schedule-view">
       <div class="day-selector">
         <div class="day-btn active">Пн</div>
@@ -125,7 +110,6 @@
         <div class="day-btn" onclick="alert('Четверг пока пуст')">Чт</div>
         <div class="day-btn" onclick="alert('Пятница пока пуста')">Пт</div>
       </div>
-
       <div class="card">
         <div class="class-item">
           <div class="class-time">09:00</div>
@@ -147,11 +131,9 @@
     </div>
   </div>
 
-  <!-- ЭКРАН МАТЕРИАЛОВ -->
   <div class="screen" id="screen-materials">
     <h1>Учебные материалы</h1>
     <p class="subtitle">Лекции, практики и лабораторные</p>
-
     <div class="card">
       <div class="tabs" style="margin-bottom: 10px;">
         <div class="tab active" onclick="alert('Вкладка Лекции активна')">Лекции</div>
@@ -165,13 +147,11 @@
     </div>
   </div>
 
-  <!-- ЭКРАН ОТЧЕТОВ -->
   <div class="screen" id="screen-reports">
     <h1>Посещаемость</h1>
-    
     <div class="card" style="background: var(--primary-dark); color: white;">
       <h2 style="color:white; margin-bottom: 5px;">Отметка на сегодня</h2>
-      <p style="font-size: 13px; opacity: 0.8; margin-bottom: 15px;" id="today-date">Загрузка...</p>
+      <p style="font-size: 13px; opacity: 0.8; margin-bottom: 15px;">Выбери свой статус ниже</p>
       <div class="grid">
         <button type="button" class="btn-sm" style="background:var(--success); color:white;" onclick="markAttendance('Буду')">Буду</button>
         <button type="button" class="btn-sm" style="background:var(--warning); color:white;" onclick="markAttendance('Опоздаю')">Опоздаю</button>
@@ -179,7 +159,6 @@
       </div>
       <p id="mark-msg" style="text-align:center; margin-top:10px; font-weight:bold;"></p>
     </div>
-
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h2 style="margin:0;">Отчёт старосты</h2>
@@ -187,32 +166,20 @@
       </div>
       <table>
         <thead><tr><th>ФИО</th><th>Статус</th></tr></thead>
-        <tbody id="report-body">
-          <tr><td colspan="2" style="text-align:center; color:gray;">Загрузка данных...</td></tr>
-        </tbody>
+        <tbody id="report-body"><tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr></tbody>
       </table>
     </div>
-
     <div class="card">
       <h2>Загрузка расписания (.ics)</h2>
       <p class="subtitle" style="margin-bottom:10px;">Только для старосты</p>
-      <div class="file-upload" onclick="alert('В реальном приложении здесь откроется выбор файла!')">
-        + Выбрать файл .ics
-      </div>
+      <div class="file-upload" onclick="alert('В реальном приложении здесь откроется выбор файла!')">+ Выбрать файл .ics</div>
     </div>
   </div>
 
-  <!-- НИЖНЕЕ МЕНЮ -->
   <div class="bottom-nav" id="main-nav" style="display: none;">
-    <div class="nav-item active" onclick="show('screen-schedule', this)">
-      <div class="nav-icon">📅</div>Расписание
-    </div>
-    <div class="nav-item" onclick="show('screen-materials', this)">
-      <div class="nav-icon">📚</div>Материалы
-    </div>
-    <div class="nav-item" onclick="show('screen-reports', this)">
-      <div class="nav-icon">📊</div>Отчёты
-    </div>
+    <div class="nav-item active" onclick="show('screen-schedule', this)"><div class="nav-icon">📅</div>Расписание</div>
+    <div class="nav-item" onclick="show('screen-materials', this)"><div class="nav-icon">📚</div>Материалы</div>
+    <div class="nav-item" onclick="show('screen-reports', this)"><div class="nav-icon">📊</div>Отчёты</div>
   </div>
 
 <script>
@@ -226,6 +193,8 @@
   const tg = window.Telegram.WebApp;
   if (tg && tg.ready) { tg.ready(); tg.expand(); }
 
+  // Убрали загрузку даты при старте, чтобы не было вечной "Загрузки..."
+  
   function setRole(role) {
     currentRole = role;
     document.getElementById('role-student').classList.remove('active');
@@ -357,4 +326,4 @@
   }
 </script>
 </body>
-          </html> 
+      </html> 
