@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Помощник старосты</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<!-- Подключаем Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
@@ -92,6 +91,10 @@
     </div>
 
     <div class="card">
+      <div id="name-field" style="display: none;">
+        <label>ФИО (Фамилия Имя Отчество)</label>
+        <input type="text" id="auth-name" placeholder="Иванов Иван Иванович">
+      </div>
       <label>Email</label>
       <input type="email" id="auth-email" placeholder="student@mail.ru">
       <label>Пароль</label>
@@ -168,12 +171,13 @@
     
     <div class="card" style="background: var(--primary-dark); color: white;">
       <h2 style="color:white; margin-bottom: 5px;">Отметка на сегодня</h2>
-      <p style="font-size: 13px; opacity: 0.8; margin-bottom: 15px;">Среда, 24 октября</p>
+      <p style="font-size: 13px; opacity: 0.8; margin-bottom: 15px;" id="today-date">Загрузка даты...</p>
       <div class="grid">
-        <button type="button" class="btn-sm" style="background:var(--success); color:white;" onclick="alert('Ты будешь!')">Буду</button>
-        <button type="button" class="btn-sm" style="background:var(--warning); color:white;" onclick="alert('Опоздаю!')">Опоздаю</button>
-        <button type="button" class="btn-sm" style="background:var(--danger); color:white; grid-column: span 2;" onclick="alert('Не приду(')">Не буду</button>
+        <button type="button" class="btn-sm" style="background:var(--success); color:white;" onclick="markAttendance('Буду')">Буду</button>
+        <button type="button" class="btn-sm" style="background:var(--warning); color:white;" onclick="markAttendance('Опоздаю')">Опоздаю</button>
+        <button type="button" class="btn-sm" style="background:var(--danger); color:white; grid-column: span 2;" onclick="markAttendance('Не буду')">Не буду</button>
       </div>
+      <p id="mark-msg" style="text-align:center; margin-top:10px; font-weight:bold; color:#d4edda;"></p>
     </div>
 
     <div class="card">
@@ -182,11 +186,9 @@
         <button type="button" class="btn-sm btn-primary" onclick="downloadExcel()">В Excel</button>
       </div>
       <table>
-        <thead><tr><th>Студент</th><th>Статус</th></tr></thead>
-        <tbody>
-          <tr><td>Иванов И.</td><td><span class="badge bg-green">Буду</span></td></tr>
-          <tr><td>Петрова А.</td><td><span class="badge bg-yellow">Опоздаю</span></td></tr>
-          <tr><td>Сидоров К.</td><td><span class="badge bg-red">Не буду</span></td></tr>
+        <thead><tr><th>ФИО</th><th>Статус</th></tr></thead>
+        <tbody id="report-body">
+          <tr><td colspan="2" style="text-align:center; color:gray;">Загрузка данных...</td></tr>
         </tbody>
       </table>
     </div>
@@ -214,17 +216,20 @@
   </div>
 
 <script>
-  // --- ОБЪЯВЛЯЕМ ПЕРЕМЕННЫЕ В САМОМ НАЧАЛЕ ---
   let currentRole = 'student';
   let isLoginMode = true; 
-  
-  // --- ИНИЦИАЛИЗАЦИЯ SUPABASE ---
+  let currentUserName = '';
+
   const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const tg = window.Telegram.WebApp;
   if (tg && tg.ready) { tg.ready(); tg.expand(); }
+
+  // Устанавливаем сегодняшнюю дату
+  const today = new Date().toLocaleDateString('ru-RU');
+  document.getElementById('today-date').innerText = today;
 
   function setRole(role, element) {
     currentRole = role;
@@ -239,20 +244,24 @@
       document.getElementById('auth-subtitle').innerText = 'Войди, чтобы управлять парами';
       document.getElementById('main-auth-btn').innerText = 'Войти';
       document.getElementById('toggle-auth-btn').innerText = 'Зарегистрироваться';
+      document.getElementById('name-field').style.display = 'none';
     } else {
       document.getElementById('auth-title').innerText = 'Создать аккаунт';
       document.getElementById('auth-subtitle').innerText = 'Зарегистрируйся как ' + (currentRole === 'student' ? 'студент' : 'преподаватель');
       document.getElementById('main-auth-btn').innerText = 'Зарегистрироваться';
       document.getElementById('toggle-auth-btn').innerText = 'У меня уже есть аккаунт';
+      document.getElementById('name-field').style.display = 'block'; // Показываем поле ФИО при регистрации
     }
   }
 
   async function handleAuth() {
+    const name = document.getElementById('auth-name').value;
     const email = document.getElementById('auth-email').value;
     const password = document.getElementById('auth-pass').value;
     const btn = document.getElementById('main-auth-btn');
 
     if (!email || !password) { alert('Введи email и пароль'); return; }
+    if (!isLoginMode && !name) { alert('Введи ФИО'); return; }
     
     btn.innerText = 'Загрузка...';
     btn.disabled = true;
@@ -261,15 +270,15 @@
       if (isLoginMode) {
         const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        currentUserName = data.user.user_metadata?.full_name || email.split('@')[0];
         loginSuccess();
       } else {
         const { data, error } = await _supabase.auth.signUp({ 
           email, 
-          password,
-          options: { data: { role: currentRole } }
+          password, 
+          options: { data: { role: currentRole, full_name: name } } // Сохраняем ФИО
         });
         if (error) throw error;
-        
         alert('Регистрация успешна! Теперь ты можешь войти.');
         toggleAuthMode(); 
       }
@@ -285,6 +294,7 @@
     document.getElementById('screen-auth').classList.remove('active');
     document.getElementById('main-nav').style.display = 'flex';
     show('screen-schedule');
+    loadReport(); // Загружаем данные при входе
   }
 
   async function logout() {
@@ -304,11 +314,83 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       navElement.classList.add('active');
     }
+    if (screenId === 'screen-reports') {
+      loadReport(); // Обновляем отчет при переходе на вкладку
+    }
     window.scrollTo(0, 0);
   }
 
-  function downloadExcel() {
-    const rows = [['Студент', 'Статус'], ['Иванов И.', 'Буду']];
+  // --- ОТМЕТКА ПОСЕЩАЕМОСТИ ---
+  async function markAttendance(status) {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) return alert('Ошибка: ты не авторизован');
+
+    const msg = document.getElementById('mark-msg');
+    msg.innerText = 'Отправка...';
+
+    // Имя берем из метаданных пользователя (сохраненное при регистрации)
+    const userName = user.user_metadata?.full_name || user.email.split('@')[0];
+
+    const { error } = await _supabase.from('attendance').insert([
+      { user_id: user.id, user_email: user.email, user_name: userName, status: status, date: today }
+    ]);
+
+    if (error) {
+      msg.innerText = 'Ошибка: ' + error.message;
+      msg.style.color = '#ffb3b3';
+    } else {
+      msg.innerText = 'Успешно отмечено: ' + status;
+      msg.style.color = '#d4edda';
+      loadReport(); // Обновляем отчет сразу
+    }
+  }
+
+  // --- ЗАГРУЗКА ОТЧЕТА ---
+  async function loadReport() {
+    const tbody = document.getElementById('report-body');
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr>';
+
+    const { data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }).limit(20);
+
+    if (error) {
+      tbody.innerHTML = '<tr><td colspan="2">Ошибка загрузки: ' + error.message + '</td></tr>';
+      return;
+    }
+
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Пока нет отметок</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    data.forEach(row => {
+      let badgeClass = 'bg-green';
+      if (row.status === 'Опоздаю') badgeClass = 'bg-yellow';
+      if (row.status === 'Не буду') badgeClass = 'bg-red';
+      
+      const displayName = row.user_name || (row.user_email ? row.user_email.split('@')[0] : 'Неизвестный');
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${displayName}</td>
+          <td><span class="badge ${badgeClass}">${row.status}</span></td>
+        </tr>
+      `;
+    });
+  }
+
+  // --- ВЫГРУЗКА В EXCEL ---
+  async function downloadExcel() {
+    const { data, error } = await _supabase.from('attendance').select('*');
+    if (error) return alert('Ошибка при выгрузке: ' + error.message);
+    if (data.length === 0) return alert('Нет данных для выгрузки');
+
+    const rows = [['Дата', 'ФИО', 'Email', 'Статус']];
+    data.forEach(row => {
+      const displayName = row.user_name || (row.user_email ? row.user_email.split('@')[0] : 'Неизвестный');
+      rows.push([row.date, displayName, row.user_email, row.status]);
+    });
+
     const csv = rows.map(r => r.join(';')).join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -318,4 +400,4 @@
   }
 </script>
 </body>
-  </html>
+  </html> 
