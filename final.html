@@ -226,10 +226,6 @@
   const tg = window.Telegram.WebApp;
   if (tg && tg.ready) { tg.ready(); tg.expand(); }
 
-  window.onload = function() {
-    document.getElementById('today-date').innerText = new Date().toLocaleDateString('ru-RU');
-  };
-
   function setRole(role) {
     currentRole = role;
     document.getElementById('role-student').classList.remove('active');
