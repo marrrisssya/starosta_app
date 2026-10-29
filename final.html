@@ -106,13 +106,12 @@
     <div class="card" id="schedule-card"></div>
 
     <div class="card">
-      <h2>Загрузить расписание (.ics)</h2>
-      <p class="subtitle" style="margin-bottom:10px;">Выбери файл из деканата</p>
+      <h2>Загрузить расписание</h2>
+      <p class="subtitle" style="margin-bottom:10px;">Файл .ics из деканата или шаблон</p>
       <input type="file" id="ics-file" accept=".ics" style="display: none;" onchange="handleFileUpload(event)">
-      <div class="file-upload" onclick="document.getElementById('ics-file').click()">
-        + Выбрать файл .ics
-      </div>
-      <button type="button" class="btn-outline btn-sm" onclick="downloadTemplate()" style="width: 100%;">Скачать шаблон для заполнения</button>
+      <div class="file-upload" onclick="document.getElementById('ics-file').click()">+ Выбрать файл .ics</div>
+      <button type="button" class="btn-outline btn-sm" onclick="downloadTemplate()" style="width: 100%; margin-bottom: 10px;">Скачать шаблон</button>
+      <button type="button" class="btn-danger btn-sm" onclick="clearSchedule()" style="width: 100%;">Очистить расписание</button>
     </div>
   </div>
 
@@ -290,41 +289,65 @@
     reader.readAsText(file);
   }
 
+  // Умный парсер .ics
   function parseICS(icsText) {
     const events = [];
+    // Разбиваем файл на строки, учитывая возможные переносы строк
     const lines = icsText.split(/\r?\n/);
     let currentEvent = null;
 
     lines.forEach(line => {
       const trimmed = line.trim();
-      if (trimmed.startsWith('BEGIN:VEVENT')) currentEvent = {};
-      else if (trimmed.startsWith('END:VEVENT') && currentEvent) {
-        events.push(currentEvent);
+      if (trimmed.startsWith('BEGIN:VEVENT')) {
+        currentEvent = {};
+      } else if (trimmed.startsWith('END:VEVENT') && currentEvent) {
+        // Проверяем, что у события есть хотя бы дата начала
+        if (currentEvent.start) events.push(currentEvent);
         currentEvent = null;
-      }
-      else if (currentEvent) {
-        if (trimmed.startsWith('SUMMARY:')) currentEvent.summary = trimmed.replace('SUMMARY:', '').trim();
-        if (trimmed.startsWith('DTSTART')) {
+      } else if (currentEvent) {
+        // Ищем ключевые слова в начале строки
+        if (trimmed.startsWith('SUMMARY')) {
           const parts = trimmed.split(':');
-          if (parts.length > 1) currentEvent.start = parts[1].trim();
+          currentEvent.summary = parts.slice(1).join(':').trim();
         }
-        if (trimmed.startsWith('DTEND')) {
-           const parts = trimmed.split(':');
-           if (parts.length > 1) currentEvent.end = parts[1].trim();
+        if (trimmed.startsWith('DTSTART')) {
+          // Отрезаем всё до двоеточия (там могут быть TZID и т.д.)
+          const parts = trimmed.split(':');
+          if (parts.length > 1) {
+            let dateStr = parts[1].trim();
+            // Убираем Z (UTC), если есть
+            if (dateStr.endsWith('Z')) dateStr = dateStr.slice(0, -1);
+            currentEvent.start = dateStr;
+          }
         }
-        if (trimmed.startsWith('LOCATION:')) currentEvent.location = trimmed.replace('LOCATION:', '').trim();
-        if (trimmed.startsWith('DESCRIPTION:')) currentEvent.description = trimmed.replace('DESCRIPTION:', '').trim();
+        if (trimmed.startsWith('LOCATION')) {
+          const parts = trimmed.split(':');
+          currentEvent.location = parts.slice(1).join(':').trim();
+        }
+        if (trimmed.startsWith('DESCRIPTION')) {
+          const parts = trimmed.split(':');
+          currentEvent.description = parts.slice(1).join(':').trim();
+        }
       }
     });
 
     if (events.length === 0) {
-      alert('Файл прочитан, но в нем нет событий (VEVENT). Проверь файл!');
+      alert('Файл прочитан, но в нем не найдено событий (VEVENT). Возможно, файл поврежден или не содержит пар.');
       return;
     }
 
+    // Очищаем от старых данных и сохраняем новые
+    localStorage.removeItem('mySchedule');
     localStorage.setItem('mySchedule', JSON.stringify(events));
-    alert('Расписание успешно загружено! Событий: ' + events.length);
+    alert('Расписание успешно загружено! Найдено пар: ' + events.length);
     renderSchedule();
+  }
+
+  function clearSchedule() {
+    if (confirm('Ты уверена, что хочешь удалить расписание?')) {
+      localStorage.removeItem('mySchedule');
+      renderSchedule();
+    }
   }
 
   function renderSchedule() {
@@ -343,7 +366,8 @@
       const targetDayNum = dayMap[currentDay];
       
       const todaysEvents = scheduleData.filter(ev => {
-        if (!ev.start) return false;
+        if (!ev.start || ev.start.length < 8) return false;
+        // Извлекаем дату: YYYYMMDD
         const dateStr = ev.start.substring(0, 8);
         const y = parseInt(dateStr.substring(0, 4));
         const m = parseInt(dateStr.substring(4, 6)) - 1;
@@ -360,7 +384,8 @@
       let html = '';
       todaysEvents.sort((a, b) => a.start.localeCompare(b.start)).forEach(ev => {
         let timeStr = 'Весь день';
-        if (ev.start && ev.start.length > 9) {
+        // Если в дате есть время (длина больше 8)
+        if (ev.start.length >= 13) {
           timeStr = ev.start.substring(9, 11) + ':' + ev.start.substring(11, 13);
         }
         html += `
@@ -381,7 +406,7 @@
       days.forEach(day => {
         const targetDayNum = dayMap[day];
         const dayEvents = scheduleData.filter(ev => {
-          if (!ev.start) return false;
+          if (!ev.start || ev.start.length < 8) return false;
           const dateStr = ev.start.substring(0, 8);
           const y = parseInt(dateStr.substring(0, 4));
           const m = parseInt(dateStr.substring(4, 6)) - 1;
@@ -394,7 +419,7 @@
           html += `<h3 style="margin-top: 15px; margin-bottom: 10px; color: var(--primary);">${day}</h3>`;
           dayEvents.sort((a, b) => a.start.localeCompare(b.start)).forEach(ev => {
             let timeStr = '';
-            if (ev.start && ev.start.length > 9) timeStr = ev.start.substring(9, 11) + ':' + ev.start.substring(11, 13);
+            if (ev.start.length >= 13) timeStr = ev.start.substring(9, 11) + ':' + ev.start.substring(11, 13);
             html += `
               <div class="class-item" style="padding-bottom: 8px; margin-bottom: 8px;">
                 <div class="class-time">${timeStr}</div>
