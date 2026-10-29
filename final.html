@@ -3,83 +3,135 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Помощник</title>
+<title>Помощник старосты</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  body { background: #f8f5fc; font-family: sans-serif; padding: 16px; padding-bottom: 80px; margin: 0; }
-  .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(123,44,191,0.1); margin-bottom: 16px; }
-  h1 { color: #3c096c; font-size: 22px; margin-top: 0; }
-  input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e0d0f0; border-radius: 10px; box-sizing: border-box; }
-  button { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-  .btn-purple { background: #7b2cbf; color: white; }
-  .btn-outline { background: transparent; color: #7b2cbf; border: 2px solid #7b2cbf; }
-  .btn-green { background: #2ecc71; color: white; }
-  .btn-yellow { background: #f1c40f; color: white; }
-  .btn-red { background: #e74c3c; color: white; }
-  .screen { display: none; }
+  :root { --primary: #7b2cbf; --primary-light: #9d4edd; --primary-dark: #3c096c; --bg: #f8f5fc; --card: #ffffff; --text: #2b2b2b; --text-muted: #6c757d; --success: #2ecc71; --warning: #f1c40f; --danger: #e74c3c; }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
+  
+  .screen { display: none; padding: 16px; }
   .screen.active { display: block; }
-  .nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-  .nav div { cursor: pointer; font-weight: bold; color: #7b2cbf; padding: 10px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  td, th { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
-  .green-text { color: green; font-weight: bold; margin-top: 10px; text-align: center; }
-  .red-text { color: red; font-weight: bold; margin-top: 10px; text-align: center; }
+  
+  .card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(123, 44, 191, 0.08); margin-bottom: 16px; }
+  h1 { font-size: 22px; color: var(--primary-dark); margin-bottom: 8px; }
+  h3 { font-size: 18px; color: var(--primary-dark); margin-bottom: 12px; }
+  .subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+  
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+  input { width: 100%; padding: 12px 14px; border: 2px solid #e0d0f0; border-radius: 12px; font-size: 15px; margin-bottom: 14px; background: #faf7ff; outline: none; }
+  input:focus { border-color: var(--primary); background: #fff; }
+  
+  button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-bottom: 10px; }
+  button:active { transform: scale(0.98); }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+  .btn-green { background: var(--success); color: white; }
+  .btn-yellow { background: var(--warning); color: white; }
+  .btn-red { background: var(--danger); color: white; }
+  
+  .role-switch { display: flex; gap: 10px; margin-bottom: 20px; }
+  .role-btn { flex: 1; padding: 10px; text-align: center; border-radius: 10px; background: #e0d0f0; color: var(--primary-dark); font-weight: 600; cursor: pointer; }
+  .role-btn.active { background: var(--primary); color: white; }
+  
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; }
+  .nav-item { text-align: center; font-size: 13px; color: var(--primary); cursor: pointer; font-weight: 600; padding: 5px 15px; }
+  
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+  th { text-align: left; padding: 10px 5px; color: var(--text-muted); border-bottom: 2px solid #eee; }
+  td { padding: 10px 5px; border-bottom: 1px solid #eee; }
+  
+  .green-text { color: var(--success); font-weight: bold; margin-top: 10px; text-align: center; }
+  .red-text { color: var(--danger); font-weight: bold; margin-top: 10px; text-align: center; }
 </style>
 </head>
 <body>
 
-  <!-- ЭКРАН ВХОДА -->
+  <!-- ЭКРАН ВХОДА / РЕГИСТРАЦИИ -->
   <div class="screen active" id="screen-auth">
     <h1 id="auth-title">Вход</h1>
+    <p class="subtitle" id="auth-subtitle">Выбери свою роль и войди</p>
+    
+    <div class="role-switch">
+      <div id="role-student" class="role-btn active" onclick="setRole('student')">Студент</div>
+      <div id="role-teacher" class="role-btn" onclick="setRole('teacher')">Преподаватель</div>
+    </div>
+
     <div class="card">
       <div id="name-field" style="display: none;">
-        <input type="text" id="auth-name" placeholder="ФИО (Иванов Иван)">
+        <label>ФИО (Фамилия Имя Отчество)</label>
+        <input type="text" id="auth-name" placeholder="Иванов Иван Иванович">
       </div>
-      <input type="email" id="auth-email" placeholder="Email">
-      <input type="password" id="auth-pass" placeholder="Пароль">
-      <button class="btn-purple" onclick="handleAuth()" id="main-auth-btn">Войти</button>
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="student@mail.ru">
+      <label>Пароль</label>
+      <input type="password" id="auth-pass" placeholder="••••••••">
+      
+      <button class="btn-primary" onclick="handleAuth()" id="main-auth-btn">Войти</button>
       <button class="btn-outline" onclick="toggleAuthMode()" id="toggle-auth-btn">Зарегистрироваться</button>
     </div>
   </div>
 
   <!-- ЭКРАН ОТЧЕТОВ -->
   <div class="screen" id="screen-reports">
-    <h1>Посещаемость</h1>
-    <div class="card" style="background: #3c096c; color: white;">
-      <h3 style="margin-top: 0;">Отметка на сегодня</h3>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h1>Посещаемость</h1>
+      <button class="btn-outline" onclick="logout()" style="width: auto; padding: 8px 12px; font-size: 13px; margin: 0;">Выйти</button>
+    </div>
+    
+    <div class="card" style="background: var(--primary-dark); color: white;">
+      <h3 style="color: white; margin-top: 0;">Отметка на сегодня</h3>
       <button class="btn-green" onclick="markAttendance('Буду')">Буду</button>
       <button class="btn-yellow" onclick="markAttendance('Опоздаю')">Опоздаю</button>
       <button class="btn-red" onclick="markAttendance('Не буду')">Не буду</button>
       <div id="mark-msg"></div>
     </div>
+
     <div class="card">
       <h3 style="margin-top: 0;">Отчёт старосты</h3>
-      <button class="btn-purple" onclick="downloadExcel()">Скачать в Excel</button>
+      <button class="btn-primary" onclick="downloadExcel()">Скачать в Excel</button>
       <table>
         <thead><tr><th>ФИО</th><th>Статус</th></tr></thead>
-        <tbody id="report-body"></tbody>
+        <tbody id="report-body">
+          <tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
 
   <!-- МЕНЮ СНИЗУ -->
-  <div class="nav" id="main-nav" style="display: none;">
-    <div onclick="show('screen-reports')">📊 Отчёты</div>
-    <div onclick="logout()" style="color: #e74c3c;">🚪 Выйти</div>
+  <div class="bottom-nav" id="main-nav" style="display: none;">
+    <div class="nav-item" onclick="logout()" style="color: var(--danger);">🚪 Выйти</div>
   </div>
 
 <script>
   let isLoginMode = true;
+  let currentRole = 'student';
+
   const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // Переключение ролей при входе
+  function setRole(role) {
+    currentRole = role;
+    document.getElementById('role-student').classList.remove('active');
+    document.getElementById('role-teacher').classList.remove('active');
+    
+    if (role === 'student') {
+      document.getElementById('role-student').classList.add('active');
+    } else {
+      document.getElementById('role-teacher').classList.add('active');
+    }
+  }
+
   function toggleAuthMode() {
     isLoginMode = !isLoginMode;
     document.getElementById('auth-title').innerText = isLoginMode ? 'Вход' : 'Регистрация';
+    document.getElementById('auth-subtitle').innerText = isLoginMode ? 'Войди, чтобы продолжить' : 'Заполни данные для создания аккаунта';
     document.getElementById('main-auth-btn').innerText = isLoginMode ? 'Войти' : 'Зарегистрироваться';
-    document.getElementById('toggle-auth-btn').innerText = isLoginMode ? 'Зарегистрироваться' : 'У меня есть аккаунт';
+    document.getElementById('toggle-auth-btn').innerText = isLoginMode ? 'Зарегистрироваться' : 'У меня уже есть аккаунт';
     document.getElementById('name-field').style.display = isLoginMode ? 'none' : 'block';
   }
 
@@ -95,17 +147,25 @@
       if (isLoginMode) {
         const { error } = await _supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        
         document.getElementById('screen-auth').classList.remove('active');
         document.getElementById('main-nav').style.display = 'flex';
-        show('screen-reports');
+        document.getElementById('screen-reports').classList.add('active');
         loadReport();
+        
       } else {
-        const { error } = await _supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+        const { error } = await _supabase.auth.signUp({ 
+          email, 
+          password, 
+          options: { data: { full_name: name, role: currentRole } } 
+        });
         if (error) throw error;
-        alert('Регистрация успешна! Войди.');
-        toggleAuthMode();
+        alert('Регистрация успешна! Теперь ты можешь войти.');
+        toggleAuthMode(); 
       }
-    } catch (error) { alert(error.message); }
+    } catch (error) { 
+      alert('Ошибка: ' + error.message); 
+    }
   }
 
   async function logout() {
@@ -113,28 +173,24 @@
     document.getElementById('main-nav').style.display = 'none';
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-auth').classList.add('active');
-  }
-
-  function show(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    if(id === 'screen-reports') loadReport();
+    document.getElementById('auth-pass').value = '';
   }
 
   async function markAttendance(status) {
     const { data: { user } } = await _supabase.auth.getUser();
-    const msg = document.getElementById('mark-msg');
+    if (!user) return alert('Ошибка: ты не авторизован');
     
-    // Берем сегодняшнюю дату прямо сейчас
+    const msg = document.getElementById('mark-msg');
+    msg.className = ''; 
+    msg.innerText = 'Отправка...';
+    
     const today = new Date().toLocaleDateString('ru-RU');
-    const name = user.user_metadata?.full_name || 'Без имени';
-
-    msg.className = ''; msg.innerText = 'Отправка...';
+    const userName = user.user_metadata?.full_name || 'Без имени';
 
     const { error } = await _supabase.from('attendance').insert([{ 
       user_id: user.id, 
       user_email: user.email, 
-      user_name: name, 
+      user_name: userName, 
       status: status, 
       date: today 
     }]);
@@ -151,24 +207,44 @@
 
   async function loadReport() {
     const tbody = document.getElementById('report-body');
-    tbody.innerHTML = '<tr><td colspan="2">Загрузка...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr>';
+    
     const { data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }).limit(20);
     
-    if (error) return tbody.innerHTML = '<tr><td colspan="2">Ошибка: ' + error.message + '</td></tr>';
-    if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="2">Нет отметок</td></tr>';
+    if (error) {
+      tbody.innerHTML = '<tr><td colspan="2">Ошибка: ' + error.message + '</td></tr>';
+      return;
+    }
     
-    tbody.innerHTML = data.map(r => `<tr><td>${r.user_name || 'Без имени'}</td><td>${r.status}</td></tr>`).join('');
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:gray;">Пока нет отметок</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = data.map(row => {
+      let color = 'green';
+      if (row.status === 'Опоздаю') color = '#f1c40f';
+      if (row.status === 'Не буду') color = '#e74c3c';
+      return `<tr><td>${row.user_name || 'Без имени'}</td><td style="color:${color}; font-weight:bold;">${row.status}</td></tr>`;
+    }).join('');
   }
 
   async function downloadExcel() {
-    const { data } = await _supabase.from('attendance').select('*');
-    if (!data || data.length === 0) return alert('Нет данных');
-    const csv = [['Дата', 'ФИО', 'Статус'], ...data.map(r => [r.date, r.user_name, r.status])].map(e => e.join(';')).join('\n');
+    const { data, error } = await _supabase.from('attendance').select('*');
+    if (error) return alert('Ошибка: ' + error.message);
+    if (!data || data.length === 0) return alert('Нет данных для выгрузки');
+    
+    const rows = [['Дата', 'ФИО', 'Статус']];
+    data.forEach(row => {
+      rows.push([row.date, row.user_name || 'Без имени', row.status]);
+    });
+    
+    const csv = rows.map(r => r.join(';')).join('\n');
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
-    link.download = 'report.csv';
+    link.download = 'посещаемость.csv';
     link.click();
   }
 </script>
 </body>
-  </html> 
+    </html>
