@@ -221,8 +221,11 @@
   const tg = window.Telegram.WebApp;
   if (tg && tg.ready) { tg.ready(); tg.expand(); }
 
-  const today = new Date().toLocaleDateString('ru-RU');
-  document.getElementById('today-date').innerText = today;
+  // ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ: запускаем код только когда страница полностью загрузилась
+  window.onload = function() {
+    const today = new Date().toLocaleDateString('ru-RU');
+    document.getElementById('today-date').innerText = today;
+  };
 
   function setRole(role, element) {
     currentRole = role;
@@ -319,9 +322,10 @@
     msg.style.color = '#fff';
 
     const userName = user.user_metadata?.full_name || 'Без имени';
+    const todayDate = new Date().toLocaleDateString('ru-RU');
 
     const { error } = await _supabase.from('attendance').insert([
-      { user_id: user.id, user_email: user.email, user_name: userName, status: status, date: today }
+      { user_id: user.id, user_email: user.email, user_name: userName, status: status, date: todayDate }
     ]);
 
     if (error) {
@@ -387,4 +391,4 @@
   }
 </script>
 </body>
-        </html>
+        </html> 
