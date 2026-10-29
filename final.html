@@ -149,7 +149,9 @@
 
   <div class="screen" id="screen-reports">
     <h1>Посещаемость</h1>
-    <div class="card" style="background: var(--primary-dark); color: white;">
+    
+    <!-- Блок отметки (скрыт для преподавателей) -->
+    <div class="card" id="mark-block" style="background: var(--primary-dark); color: white;">
       <h2 style="color:white; margin-bottom: 5px;">Отметка на сегодня</h2>
       <p style="font-size: 13px; opacity: 0.8; margin-bottom: 15px;">Выбери свой статус ниже</p>
       <div class="grid">
@@ -159,9 +161,10 @@
       </div>
       <p id="mark-msg" style="text-align:center; margin-top:10px; font-weight:bold;"></p>
     </div>
+
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h2 style="margin:0;">Отчёт старосты</h2>
+        <h2 style="margin:0;">Отчёт</h2>
         <button type="button" class="btn-sm btn-primary" onclick="downloadExcel()">В Excel</button>
       </div>
       <table>
@@ -169,6 +172,7 @@
         <tbody id="report-body"><tr><td colspan="2" style="text-align:center; color:gray;">Загрузка...</td></tr></tbody>
       </table>
     </div>
+
     <div class="card">
       <h2>Загрузка расписания (.ics)</h2>
       <p class="subtitle" style="margin-bottom:10px;">Только для старосты</p>
@@ -185,6 +189,7 @@
 <script>
   let currentRole = 'student';
   let isLoginMode = true; 
+  let userRole = 'student'; // Роль текущего пользователя
 
   const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
@@ -193,8 +198,6 @@
   const tg = window.Telegram.WebApp;
   if (tg && tg.ready) { tg.ready(); tg.expand(); }
 
-  // Убрали загрузку даты при старте, чтобы не было вечной "Загрузки..."
-  
   function setRole(role) {
     currentRole = role;
     document.getElementById('role-student').classList.remove('active');
@@ -225,8 +228,19 @@
 
     try {
       if (isLoginMode) {
-        const { error } = await _supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        
+        // Получаем роль из метаданных
+        userRole = data.user.user_metadata?.role || 'student';
+        
+        // Скрываем кнопки отметки, если это препод
+        if (userRole === 'teacher') {
+          document.getElementById('mark-block').style.display = 'none';
+        } else {
+          document.getElementById('mark-block').style.display = 'block';
+        }
+
         document.getElementById('screen-auth').classList.remove('active');
         document.getElementById('main-nav').style.display = 'flex';
         show('screen-schedule');
@@ -278,14 +292,34 @@
     const userName = user.user_metadata?.full_name || 'Без имени';
     const todayDate = new Date().toLocaleDateString('ru-RU');
 
-    const { error } = await _supabase.from('attendance').insert([
-      { user_id: user.id, user_email: user.email, user_name: userName, status: status, date: todayDate }
-    ]);
+    // Сначала проверяем, есть ли уже отметка на сегодня
+    const { data: existing } = await _supabase
+      .from('attendance')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('date', todayDate)
+      .single();
+
+    let error;
+    if (existing) {
+      // Если есть — обновляем
+      const { error: updateError } = await _supabase
+        .from('attendance')
+        .update({ status: status, user_name: userName })
+        .eq('id', existing.id);
+      error = updateError;
+    } else {
+      // Если нет — создаем новую
+      const { error: insertError } = await _supabase
+        .from('attendance')
+        .insert([{ user_id: user.id, user_email: user.email, user_name: userName, status: status, date: todayDate }]);
+      error = insertError;
+    }
 
     if (error) {
       msg.innerText = 'Ошибка: ' + error.message; msg.style.color = '#ffb3b3';
     } else {
-      msg.innerText = 'Успешно отмечено: ' + status; msg.style.color = '#d4edda';
+      msg.innerText = 'Успешно: ' + status; msg.style.color = '#d4edda';
       loadReport();
     }
   }
@@ -326,4 +360,4 @@
   }
 </script>
 </body>
-      </html> 
+</html> 
