@@ -318,7 +318,6 @@
     msg.innerText = 'Отправка...';
     msg.style.color = '#fff';
 
-    // Берем имя из метаданных
     const userName = user.user_metadata?.full_name || 'Без имени';
 
     const { error } = await _supabase.from('attendance').insert([
