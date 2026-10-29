@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Помощник старосты</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --purple: #6a0dad;
+    --purple-light: #9b59b6;
+    --purple-bg: #f3e8ff;
+    --purple-dark: #4a0080;
+    --white: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  body {
+    background: linear-gradient(160deg, var(--purple-bg) 0%, #e8d5ff 100%);
+    min-height: 100vh;
+    color: #2d1b4e;
+    padding: 16px;
+  }
+  .app { max-width: 480px; margin: 0 auto; }
+  .screen { display: none; animation: fade 0.3s ease; }
+  .screen.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  h1 { font-size: 22px; color: var(--purple-dark); margin-bottom: 6px; }
+  h2 { font-size: 18px; color: var(--purple-dark); margin-bottom: 12px; }
+  .subtitle { font-size: 14px; color: #6b5b8a; margin-bottom: 20px; }
+
+  .card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 6px 20px rgba(106, 13, 173, 0.12);
+    margin-bottom: 16px;
+  }
+  label { display: block; font-size: 13px; color: #6b5b8a; margin-bottom: 6px; font-weight: 600; }
+  input, select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #e0d0f0;
+    border-radius: 12px;
+    font-size: 15px;
+    margin-bottom: 14px;
+    background: #faf7ff;
+    color: #2d1b4e;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--purple-light); }
+
+  button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  button:active { transform: scale(0.98); }
+  .btn-primary { background: var(--purple); color: var(--white); }
+  .btn-secondary { background: var(--purple-bg); color: var(--purple-dark); margin-top: 10px; }
+  .btn-success { background: #2ecc71; color: #fff; }
+  .btn-warning { background: #f39c12; color: #fff; }
+  .btn-danger { background: #e74c3c; color: #fff; }
+  .btn-small { padding: 10px; font-size: 14px; }
+
+  .options { display: flex; gap: 8px; flex-wrap: wrap; }
+  .options button { flex: 1; min-width: 100px; }
+
+  .schedule-item {
+    background: var(--white);
+    border-left: 4px solid var(--purple-light);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(106, 13, 173, 0.08);
+  }
+  .schedule-item .time { font-size: 13px; color: var(--purple); font-weight: 700; }
+  .schedule-item .subject { font-size: 15px; font-weight: 600; margin: 4px 0; }
+  .schedule-item .room { font-size: 13px; color: #6b5b8a; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--white); border-radius: 12px; overflow: hidden; }
+  th { background: var(--purple); color: #fff; padding: 10px 8px; text-align: left; font-weight: 600; }
+  td { padding: 10px 8px; border-bottom: 1px solid #f0e6ff; }
+  tr:last-child td { border-bottom: none; }
+
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+  .badge-green { background: #d4f8e0; color: #1e8449; }
+  .badge-orange { background: #fdebd0; color: #b9770e; }
+  .badge-red { background: #fadbd8; color: #a93226; }
+
+  .status-msg { text-align: center; font-size: 14px; color: var(--purple); margin-top: 12px; font-weight: 600; }
+  .back-link { display: inline-block; margin-top: 8px; color: var(--purple); font-size: 14px; cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ЭКРАН 1: Регистрация -->
+  <div class="screen active" id="screen-register">
+    <h1>Помощник старосты</h1>
+    <p class="subtitle">Зарегистрируйся, чтобы видеть расписание и отмечаться</p>
+    <div class="card">
+      <label>Имя и фамилия</label>
+      <input id="reg-name" placeholder="Иван Иванов">
+      <label>Группа</label>
+      <input id="reg-group" placeholder="Например, ИС-21">
+      <button class="btn-primary" onclick="goToGroup()">Продолжить</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 2: Выбор группы -->
+  <div class="screen" id="screen-group">
+    <h1>Выбор группы</h1>
+    <p class="subtitle">Выбери свою группу из списка</p>
+    <div class="card">
+      <label>Группа</label>
+      <select id="group-select">
+        <option value="">— выбери —</option>
+        <option>ИС-21</option>
+        <option>ИС-22</option>
+        <option>ПИ-21</option>
+        <option>ПИ-22</option>
+      </select>
+      <button class="btn-primary" onclick="goToSubgroup()">Далее</button>
+      <button class="btn-secondary" onclick="show('screen-register')">Назад</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 3: Выбор подгруппы -->
+  <div class="screen" id="screen-subgroup">
+    <h1>Подгруппа</h1>
+    <p class="subtitle">На некоторых предметах группа делится на подгруппы</p>
+    <div class="card">
+      <label>Подгруппа</label>
+      <select id="subgroup-select">
+        <option value="">— выбери —</option>
+        <option>1 подгруппа</option>
+        <option>2 подгруппа</option>
+      </select>
+      <button class="btn-primary" onclick="goToSchedule()">Далее</button>
+      <button class="btn-secondary" onclick="show('screen-group')">Назад</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 4: Расписание -->
+  <div class="screen" id="screen-schedule">
+    <h1>Расписание</h1>
+    <p class="subtitle">Сегодня, пятница</p>
+    <div class="schedule-item">
+      <div class="time">09:00 – 10:30</div>
+      <div class="subject">Математика</div>
+      <div class="room">Ауд. 301</div>
+    </div>
+    <div class="schedule-item">
+      <div class="time">10:40 – 12:10</div>
+      <div class="subject">Программирование</div>
+      <div class="room">Ауд. 205</div>
+    </div>
+    <div class="schedule-item">
+      <div class="time">12:40 – 14:10</div>
+      <div class="subject">Физика</div>
+      <div class="room">Ауд. 112</div>
+    </div>
+    <button class="btn-primary" onclick="show('screen-mark')">Отметиться на пары</button>
+    <button class="btn-secondary" onclick="show('screen-report')">Отчёт для старосты</button>
+  </div>
+
+  <!-- ЭКРАН 5: Отметка -->
+  <div class="screen" id="screen-mark">
+    <h1>Отметка посещаемости</h1>
+    <p class="subtitle">Отметь, будешь ли ты на парах сегодня</p>
+    <div class="card">
+      <label>Твой статус</label>
+      <div class="options">
+        <button class="btn-success btn-small" onclick="markStatus('Буду')">Буду</button>
+        <button class="btn-warning btn-small" onclick="markStatus('Опоздаю')">Опоздаю</button>
+        <button class="btn-danger btn-small" onclick="markStatus('Не буду')">Не буду</button>
+      </div>
+      <div class="status-msg" id="mark-status-msg"></div>
+      <button class="btn-secondary" onclick="show('screen-schedule')">Назад к расписанию</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 6: Отчёт для старосты -->
+  <div class="screen" id="screen-report">
+    <h1>Отчёт для старосты</h1>
+    <p class="subtitle">Посещаемость за месяц</p>
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>Студент</th><th>Статус</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Иванов И.</td><td><span class="badge badge-green">Буду</span></td></tr>
+          <tr><td>Петрова А.</td><td><span class="badge badge-orange">Опоздаю</span></td></tr>
+          <tr><td>Сидоров К.</td><td><span class="badge badge-red">Не буду</span></td></tr>
+          <tr><td>Кузнецова М.</td><td><span class="badge badge-green">Буду</span></td></tr>
+        </tbody>
+      </table>
+      <button class="btn-primary" style="margin-top:16px" onclick="downloadReport()">Скачать в Excel (CSV)</button>
+      <button class="btn-secondary" onclick="show('screen-schedule')">Назад</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  if (tg && tg.ready) { tg.ready(); tg.expand(); }
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function goToGroup() {
+    const name = document.getElementById('reg-name').value.trim();
+    if (!name) { alert('Введи имя и фамилию'); return; }
+    show('screen-group');
+  }
+
+  function goToSubgroup() {
+    const g = document.getElementById('group-select').value;
+    if (!g) { alert('Выбери группу'); return; }
+    show('screen-subgroup');
+  }
+
+  function goToSchedule() {
+    const s = document.getElementById('subgroup-select').value;
+    if (!s) { alert('Выбери подгруппу'); return; }
+    show('screen-schedule');
+  }
+
+  function markStatus(status) {
+    document.getElementById('mark-status-msg').textContent = 'Ты отметился: ' + status;
+  }
+
+  function downloadReport() {
+    const rows = [
+      ['Студент', 'Статус'],
+      ['Иванов И.', 'Буду'],
+      ['Петрова А.', 'Опоздаю'],
+      ['Сидоров К.', 'Не буду'],
+      ['Кузнецова М.', 'Буду']
+    ];
+    const csv = rows.map(r => r.join(';')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'посещаемость.csv';
+    link.click();
+  }
+</script>
+</body>
+  </html>
