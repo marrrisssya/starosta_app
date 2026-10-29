@@ -102,15 +102,9 @@
       <div class="tab" onclick="switchView('week')">На неделю</div>
     </div>
 
-    <div class="day-selector" id="day-selector">
-      <!-- Дни недели добавляются скриптом -->
-    </div>
+    <div class="day-selector" id="day-selector"></div>
+    <div class="card" id="schedule-card"></div>
 
-    <div class="card" id="schedule-card">
-      <p style="text-align: center; color: gray; padding: 20px;">Загрузка расписания...</p>
-    </div>
-
-    <!-- Блок загрузки .ics (только для старосты) -->
     <div class="card">
       <h2>Загрузить расписание (.ics)</h2>
       <p class="subtitle" style="margin-bottom:10px;">Выбери файл из деканата</p>
@@ -173,7 +167,7 @@
   let isLoginMode = true; 
   let userRole = 'student';
   let currentView = 'day';
-  let currentDay = 'Пн'; // Текущий выбранный день
+  let currentDay = 'Пн';
   
   const SUPABASE_URL = 'https://hbjemdxgqhhvamvvzkia.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_shyAWOMMAzBSG9syim0UyQ_5UoWR2KR';
@@ -182,7 +176,6 @@
   const tg = window.Telegram.WebApp;
   if (tg && tg.ready) { tg.ready(); tg.expand(); }
 
-  // Инициализация дней недели
   const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
   const daySelector = document.getElementById('day-selector');
   days.forEach(day => {
@@ -238,7 +231,7 @@
         document.getElementById('screen-auth').classList.remove('active');
         document.getElementById('main-nav').style.display = 'flex';
         show('screen-schedule');
-        renderSchedule(); // Отрисовываем расписание при входе
+        renderSchedule();
         loadReport();
       } else {
         const { error } = await _supabase.auth.signUp({ 
@@ -277,7 +270,7 @@
     window.scrollTo(0, 0);
   }
 
-  // --- ЛОГИКА РАСПИСАНИЯ (.ics) ---
+  // --- РАСПИСАНИЕ ---
   function switchView(view) {
     currentView = view;
     document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
@@ -292,8 +285,7 @@
 
     const reader = new FileReader();
     reader.onload = function(e) {
-      const content = e.target.result;
-      parseICS(content);
+      parseICS(e.target.result);
     };
     reader.readAsText(file);
   }
@@ -304,29 +296,34 @@
     let currentEvent = null;
 
     lines.forEach(line => {
-      if (line.startsWith('BEGIN:VEVENT')) currentEvent = {};
-      else if (line.startsWith('END:VEVENT') && currentEvent) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('BEGIN:VEVENT')) currentEvent = {};
+      else if (trimmed.startsWith('END:VEVENT') && currentEvent) {
         events.push(currentEvent);
         currentEvent = null;
       }
       else if (currentEvent) {
-        if (line.startsWith('SUMMARY:')) currentEvent.summary = line.replace('SUMMARY:', '').trim();
-        if (line.startsWith('DTSTART:')) {
-          const dateStr = line.replace('DTSTART:', '').trim();
-          currentEvent.start = dateStr; 
+        if (trimmed.startsWith('SUMMARY:')) currentEvent.summary = trimmed.replace('SUMMARY:', '').trim();
+        if (trimmed.startsWith('DTSTART')) {
+          const parts = trimmed.split(':');
+          if (parts.length > 1) currentEvent.start = parts[1].trim();
         }
-        if (line.startsWith('DTEND:')) {
-           const dateStr = line.replace('DTEND:', '').trim();
-           currentEvent.end = dateStr;
+        if (trimmed.startsWith('DTEND')) {
+           const parts = trimmed.split(':');
+           if (parts.length > 1) currentEvent.end = parts[1].trim();
         }
-        if (line.startsWith('LOCATION:')) currentEvent.location = line.replace('LOCATION:', '').trim();
-        if (line.startsWith('DESCRIPTION:')) currentEvent.description = line.replace('DESCRIPTION:', '').trim();
+        if (trimmed.startsWith('LOCATION:')) currentEvent.location = trimmed.replace('LOCATION:', '').trim();
+        if (trimmed.startsWith('DESCRIPTION:')) currentEvent.description = trimmed.replace('DESCRIPTION:', '').trim();
       }
     });
 
-    // Сохраняем расписание в память браузера
+    if (events.length === 0) {
+      alert('Файл прочитан, но в нем нет событий (VEVENT). Проверь файл!');
+      return;
+    }
+
     localStorage.setItem('mySchedule', JSON.stringify(events));
-    alert('Расписание успешно загружено!');
+    alert('Расписание успешно загружено! Событий: ' + events.length);
     renderSchedule();
   }
 
@@ -339,18 +336,20 @@
       return;
     }
 
-    // Если вид "На день"
+    const dayMap = { 'Пн': 1, 'Вт': 2, 'Ср': 3, 'Чт': 4, 'Пт': 5, 'Сб': 6, 'Вс': 0 };
+
     if (currentView === 'day') {
       document.getElementById('day-selector').style.display = 'flex';
-      
-      const dayMap = { 'Пн': 1, 'Вт': 2, 'Ср': 3, 'Чт': 4, 'Пт': 5, 'Сб': 6, 'Вс': 0 };
       const targetDayNum = dayMap[currentDay];
       
       const todaysEvents = scheduleData.filter(ev => {
         if (!ev.start) return false;
-        const dt = ev.start.includes('T') ? ev.start.split('T')[0] : ev.start;
-        const d = new Date(dt);
-        return d.getDay() === targetDayNum;
+        const dateStr = ev.start.substring(0, 8);
+        const y = parseInt(dateStr.substring(0, 4));
+        const m = parseInt(dateStr.substring(4, 6)) - 1;
+        const d = parseInt(dateStr.substring(6, 8));
+        const dateObj = new Date(y, m, d);
+        return dateObj.getDay() === targetDayNum;
       });
 
       if (todaysEvents.length === 0) {
@@ -361,10 +360,9 @@
       let html = '';
       todaysEvents.sort((a, b) => a.start.localeCompare(b.start)).forEach(ev => {
         let timeStr = 'Весь день';
-        if (ev.start && ev.start.includes('T')) {
-          timeStr = ev.start.split('T')[1].substring(0,5) + ' - ' + (ev.end ? ev.end.split('T')[1].substring(0,5) : '');
+        if (ev.start && ev.start.length > 9) {
+          timeStr = ev.start.substring(9, 11) + ':' + ev.start.substring(11, 13);
         }
-        
         html += `
           <div class="class-item">
             <div class="class-time">${timeStr}</div>
@@ -377,28 +375,26 @@
         `;
       });
       card.innerHTML = html;
-    } 
-    // Если вид "На неделю"
-    else {
+    } else {
       document.getElementById('day-selector').style.display = 'none';
-      
       let html = '';
       days.forEach(day => {
-        const dayMap = { 'Пн': 1, 'Вт': 2, 'Ср': 3, 'Чт': 4, 'Пт': 5, 'Сб': 6 };
         const targetDayNum = dayMap[day];
-        
         const dayEvents = scheduleData.filter(ev => {
           if (!ev.start) return false;
-          const dt = ev.start.includes('T') ? ev.start.split('T')[0] : ev.start;
-          const d = new Date(dt);
-          return d.getDay() === targetDayNum;
+          const dateStr = ev.start.substring(0, 8);
+          const y = parseInt(dateStr.substring(0, 4));
+          const m = parseInt(dateStr.substring(4, 6)) - 1;
+          const d = parseInt(dateStr.substring(6, 8));
+          const dateObj = new Date(y, m, d);
+          return dateObj.getDay() === targetDayNum;
         });
 
         if (dayEvents.length > 0) {
           html += `<h3 style="margin-top: 15px; margin-bottom: 10px; color: var(--primary);">${day}</h3>`;
           dayEvents.sort((a, b) => a.start.localeCompare(b.start)).forEach(ev => {
             let timeStr = '';
-            if (ev.start && ev.start.includes('T')) timeStr = ev.start.split('T')[1].substring(0,5);
+            if (ev.start && ev.start.length > 9) timeStr = ev.start.substring(9, 11) + ':' + ev.start.substring(11, 13);
             html += `
               <div class="class-item" style="padding-bottom: 8px; margin-bottom: 8px;">
                 <div class="class-time">${timeStr}</div>
@@ -411,13 +407,11 @@
           });
         }
       });
-      
       if (html === '') card.innerHTML = '<p style="text-align: center; color: gray; padding: 20px;">На неделе пар нет</p>';
       else card.innerHTML = html;
     }
   }
 
-  // Скачивание шаблона .ics
   function downloadTemplate() {
     const template = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -504,4 +498,4 @@ END:VCALENDAR`;
   }
 </script>
 </body>
-        </html>
+  </html> 
