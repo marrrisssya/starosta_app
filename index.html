@@ -22,15 +22,13 @@
   body {
     background-color: var(--bg);
     color: var(--text);
-    padding-bottom: 70px; /* Место для нижнего меню */
+    padding-bottom: 80px;
   }
   
-  /* Экраны */
   .screen { display: none; padding: 16px; animation: fadeIn 0.3s; }
   .screen.active { display: block; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 
-  /* Карточки и формы */
   .card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(123, 44, 191, 0.08); margin-bottom: 16px; }
   h1 { font-size: 22px; color: var(--primary-dark); margin-bottom: 8px; }
   h2 { font-size: 18px; color: var(--primary-dark); margin-bottom: 12px; }
@@ -43,7 +41,6 @@
   }
   input:focus, select:focus { border-color: var(--primary); background: #fff; }
 
-  /* Кнопки */
   button {
     width: 100%; padding: 14px; border: none; border-radius: 12px;
     font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s;
@@ -54,12 +51,10 @@
   .btn-danger { background: #ffe3e3; color: var(--danger); }
   .btn-sm { padding: 8px 12px; font-size: 13px; width: auto; border-radius: 8px; }
 
-  /* Роли (Студент / Препод) */
   .role-switch { display: flex; gap: 10px; margin-bottom: 20px; }
   .role-btn { flex: 1; padding: 10px; text-align: center; border-radius: 10px; background: #e0d0f0; color: var(--primary-dark); font-weight: 600; cursor: pointer; }
   .role-btn.active { background: var(--primary); color: white; }
 
-  /* Нижнее меню навигации */
   .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; background: white;
     display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
@@ -69,7 +64,6 @@
   .nav-item.active { color: var(--primary); font-weight: bold; }
   .nav-icon { font-size: 20px; margin-bottom: 2px; }
 
-  /* Расписание */
   .day-selector { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 10px; margin-bottom: 10px; }
   .day-btn { padding: 8px 16px; border-radius: 20px; background: white; border: 1px solid #e0d0f0; white-space: nowrap; cursor: pointer; }
   .day-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
@@ -81,12 +75,10 @@
   .class-details { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; line-height: 1.4; }
   .class-hw { font-size: 12px; background: #fff3cd; color: #856404; padding: 6px 10px; border-radius: 6px; margin-top: 6px; }
 
-  /* Табы */
   .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
   .tab { flex: 1; padding: 10px; text-align: center; background: white; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
   .tab.active { background: var(--primary); color: white; }
 
-  /* Таблица */
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { text-align: left; padding: 10px 5px; color: var(--text-muted); border-bottom: 2px solid #eee; }
   td { padding: 10px 5px; border-bottom: 1px solid #eee; }
@@ -95,7 +87,6 @@
   .bg-yellow { background: #fff3cd; color: #856404; }
   .bg-red { background: #f8d7da; color: #721c24; }
 
-  /* Сетка */
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .file-upload { border: 2px dashed var(--primary-light); padding: 20px; text-align: center; border-radius: 12px; color: var(--primary); font-weight: 600; cursor: pointer; }
 </style>
@@ -108,8 +99,8 @@
     <p class="subtitle">Войди, чтобы управлять парами</p>
     
     <div class="role-switch">
-      <div class="role-btn active" onclick="setRole('student')">Студент</div>
-      <div class="role-btn" onclick="setRole('teacher')">Преподаватель</div>
+      <div class="role-btn active" onclick="setRole('student', this)">Студент</div>
+      <div class="role-btn" onclick="setRole('teacher', this)">Преподаватель</div>
     </div>
 
     <div class="card">
@@ -131,17 +122,17 @@
     </div>
 
     <div class="tabs">
-      <div class="tab active" onclick="switchView('day')">На день</div>
-      <div class="tab" onclick="switchView('week')">На неделю</div>
+      <div class="tab active" onclick="alert('Вид на день уже открыт!')">На день</div>
+      <div class="tab" onclick="alert('Вид на неделю будет в следующем обновлении')">На неделю</div>
     </div>
 
     <div id="schedule-view">
       <div class="day-selector">
         <div class="day-btn active">Пн</div>
-        <div class="day-btn">Вт</div>
-        <div class="day-btn">Ср</div>
-        <div class="day-btn">Чт</div>
-        <div class="day-btn">Пт</div>
+        <div class="day-btn" onclick="alert('Вторник пока пуст')">Вт</div>
+        <div class="day-btn" onclick="alert('Среда пока пуста')">Ср</div>
+        <div class="day-btn" onclick="alert('Четверг пока пуст')">Чт</div>
+        <div class="day-btn" onclick="alert('Пятница пока пуста')">Пт</div>
       </div>
 
       <div class="card">
@@ -172,13 +163,13 @@
 
     <div class="card">
       <div class="tabs" style="margin-bottom: 10px;">
-        <div class="tab active">Лекции</div>
-        <div class="tab">Практики</div>
-        <div class="tab">Лабы</div>
+        <div class="tab active" onclick="alert('Вкладка Лекции активна')">Лекции</div>
+        <div class="tab" onclick="alert('Вкладка Практики скоро появится')">Практики</div>
+        <div class="tab" onclick="alert('Вкладка Лабы скоро появится')">Лабы</div>
       </div>
       <div style="font-size: 14px;">
-        <p style="margin-bottom: 10px;">📄 <b>Лекция 1. Введение</b> (PDF, 2 МБ) <button class="btn-sm btn-outline" style="float:right;">Скачать</button></p>
-        <p>📄 <b>Лекция 2. Основы</b> (PDF, 3 МБ) <button class="btn-sm btn-outline" style="float:right;">Скачать</button></p>
+        <p style="margin-bottom: 10px;">📄 <b>Лекция 1. Введение</b> (PDF, 2 МБ) <button class="btn-sm btn-outline" style="float:right;" onclick="alert('Файл начнет скачиваться (в будущем)')">Скачать</button></p>
+        <p>📄 <b>Лекция 2. Основы</b> (PDF, 3 МБ) <button class="btn-sm btn-outline" style="float:right;" onclick="alert('Файл начнет скачиваться (в будущем)')">Скачать</button></p>
       </div>
     </div>
   </div>
@@ -218,6 +209,79 @@
       <div class="file-upload" onclick="alert('В реальной версии здесь откроется выбор файла!')">
         + Выбрать файл .ics
       </div>
+    </div>
+  </div>
+
+  <!-- Нижнее меню -->
+  <div class="bottom-nav" id="main-nav" style="display: none;">
+    <div class="nav-item active" onclick="show('screen-schedule', this)">
+      <div class="nav-icon">📅</div>Расписание
+    </div>
+    <div class="nav-item" onclick="show('screen-materials', this)">
+      <div class="nav-icon">📚</div>Материалы
+    </div>
+    <div class="nav-item" onclick="show('screen-reports', this)">
+      <div class="nav-icon">📊</div>Отчёты
+    </div>
+  </div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  if (tg && tg.ready) { tg.ready(); tg.expand(); }
+
+  let currentRole = 'student';
+
+  function setRole(role, element) {
+    currentRole = role;
+    document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
+  }
+
+  function login() {
+    const email = document.getElementById('auth-email').value;
+    if (!email) { alert('Введи email'); return; }
+    
+    document.getElementById('screen-auth').classList.remove('active');
+    document.getElementById('main-nav').style.display = 'flex';
+    show('screen-schedule');
+  }
+
+  function logout() {
+    document.getElementById('main-nav').style.display = 'none';
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-auth').classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector('.nav-item').classList.add('active');
+  }
+
+  function show(screenId, navElement) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    
+    if (navElement) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      navElement.classList.add('active');
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function downloadExcel() {
+    const rows = [
+      ['Студент', 'Статус'],
+      ['Иванов И.', 'Буду'],
+      ['Петрова А.', 'Опоздаю'],
+      ['Сидоров К.', 'Не буду']
+    ];
+    const csv = rows.map(r => r.join(';')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'посещаемость.csv';
+    link.click();
+  }
+</script>
+</body>
+  </html>>
     </div>
   </div>
 
